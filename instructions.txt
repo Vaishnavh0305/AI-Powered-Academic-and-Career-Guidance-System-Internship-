@@ -1,0 +1,74 @@
+========================================================================
+             ANTIGRAVITY ACADEMIC & CAREER GUIDANCE SYSTEM
+                    DEVELOPMENT STARTUP INSTRUCTIONS
+========================================================================
+
+Welcome to the AI-Powered Academic and Career Guidance System (Antigravity Guidance).
+This is a modern, responsive, glassmorphic React frontend built using Vite, 
+Material UI, Recharts, and Framer Motion.
+
+Follow these steps to run, preview, and build the application on your machine.
+
+------------------------------------------------------------------------
+1. CORE PREREQUISITES
+------------------------------------------------------------------------
+Make sure you have Node.js installed on your computer.
+- Download link: https://nodejs.org/ (Recommended version: Node 18 or 20 LTS)
+- Verify installation by running:
+    node -v
+    npm -v
+
+------------------------------------------------------------------------
+2. INSTALL DEPENDENCIES (If setting up fresh elsewhere)
+------------------------------------------------------------------------
+If you copy this project directory to another system, navigate to the 
+project root folder in your terminal and run:
+
+    npm install
+
+This command installs all required packages registered in `package.json`, 
+including:
+  - @mui/material, @mui/icons-material, @emotion/react, @emotion/styled
+  - react-router-dom (Client-side Routing)
+  - recharts (Analytical Graphs & Charts)
+  - framer-motion (Sleek Page Transitions & Animations)
+
+------------------------------------------------------------------------
+3. RUN THE DEVELOPMENT SERVER
+------------------------------------------------------------------------
+To start the hot-reloading development server locally:
+
+    npm run dev
+
+Once launched, the terminal will output local and network URLs (usually: http://localhost:5173).
+- Open http://localhost:5173 in your web browser.
+- Any modifications you make to the source files will update the browser instantly.
+
+------------------------------------------------------------------------
+4. COMPILE & PREVIEW PRODUCTION BUNDLES
+------------------------------------------------------------------------
+To build the optimized static assets for production:
+
+    npm run build
+
+This compiles and minifies the assets into a `dist/` directory.
+To preview the compiled production build locally (which runs the minified production assets):
+
+    npm run preview
+
+------------------------------------------------------------------------
+5. PROJECT STRUCTURE SUMMARY
+------------------------------------------------------------------------
+- src/main.jsx       : Entry point connecting global styles and routing.
+- src/App.jsx        : Application Router wrapping all 12 page routes.
+- src/theme/index.js : Custom MUI palette (Dark Blue, Indigo, Cyan), typography & overrides.
+- src/components/    : Shared components (Layout, GlassCard, StatCard, RouteTransition).
+- src/pages/         : Visual views including Landing, Auth, Dashboards, Prediction, etc.
+
+------------------------------------------------------------------------
+6. DESIGN THEME SPECS
+------------------------------------------------------------------------
+- Dark Blue (#0F172A), Indigo (#4F46E5), White, Cyan Accent (#06B6D4)
+- Translucent backdrop blur cards (Glassmorphism)
+- Soft shadows, custom dark-scrollbars and rounded buttons
+========================================================================
