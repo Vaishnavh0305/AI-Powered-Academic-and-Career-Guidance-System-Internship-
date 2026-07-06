@@ -9,6 +9,7 @@ import {
   Done as DoneIcon} from '@mui/icons-material';
 import RouteTransition from '../components/RouteTransition';
 import GlassCard from '../components/GlassCard';
+import { saveGuidanceData } from '../services/api';
 
 const Interests = () => {
   const [toastOpen, setToastOpen] = useState(false);
@@ -45,8 +46,9 @@ const Interests = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     localStorage.setItem('guidance_user_interests', JSON.stringify(selectedInterests));
+    await saveGuidanceData({ interests: selectedInterests });
     setToastOpen(true);
   };
 

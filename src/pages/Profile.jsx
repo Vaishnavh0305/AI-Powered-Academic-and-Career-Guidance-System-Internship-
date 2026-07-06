@@ -339,7 +339,8 @@ const Profile = () => {
                 >
                   <MenuItem value="Class 10">Class 10 Student</MenuItem>
                   <MenuItem value="Class 12">Class 12 Student</MenuItem>
-                  <MenuItem value="Undergraduate">College Student (Undergraduate)</MenuItem>
+                  <MenuItem value="Undergraduate">College Student (Undergraduate Sci/Tech)</MenuItem>
+                  <MenuItem value="Undergraduate (Commerce)">College Student (Undergraduate Commerce)</MenuItem>
                   <MenuItem value="Graduate">Graduate Student</MenuItem>
                 </TextField>
               </Box>

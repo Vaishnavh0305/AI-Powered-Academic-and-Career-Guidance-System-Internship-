@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const { spawn } = require('child_process');
 require('dotenv').config();
 
 const app = express();
@@ -28,9 +29,15 @@ const UserDataSchema = new mongoose.Schema({
     backlogs: { type: String, default: '0' },
     studyTime: { type: String, default: '1' },
     attendance: { type: String, default: '100' },
+    marks: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} },
+    studyHours: { type: String, default: '0' },
+    favSubject: { type: String, default: '' },
+    achievements: { type: Array, default: [] },
+    currentEducation: { type: String, default: '' }
   },
   programmingSkills: { type: Map, of: Number, default: {} },
   softSkills: { type: Map, of: Number, default: {} },
+  interests: { type: Array, default: [] },
   certs: { type: Array, default: [] },
   prediction: { type: String, default: 'None' },
 }, { timestamps: true });
@@ -112,6 +119,44 @@ app.post('/api/auth/login', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Run Machine Learning Model Prediction
+app.post('/api/predict', (req, res) => {
+  const inputData = req.body;
+  
+  // Spawn python subprocess
+  const pythonProcess = spawn('python', ['predict.py'], { cwd: __dirname });
+  
+  let outputData = '';
+  let errorData = '';
+  
+  pythonProcess.stdout.on('data', (data) => {
+    outputData += data.toString();
+  });
+  
+  pythonProcess.stderr.on('data', (data) => {
+    errorData += data.toString();
+  });
+  
+  pythonProcess.on('close', (code) => {
+    if (code !== 0) {
+      console.error('Python predict.py error:', errorData);
+      return res.status(500).json({ error: 'Failed to run prediction model', details: errorData });
+    }
+    try {
+      const result = JSON.parse(outputData);
+      res.json(result);
+    } catch (e) {
+      console.error('Failed to parse predict.py output:', outputData);
+      res.status(500).json({ error: 'Invalid prediction output format' });
+    }
+  });
+  
+  // Send data to python stdin
+  pythonProcess.stdin.write(JSON.stringify(inputData));
+  pythonProcess.stdin.end();
+});
+
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
 });

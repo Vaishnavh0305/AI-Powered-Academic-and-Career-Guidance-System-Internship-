@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { saveGuidanceData, getMLPrediction } from '../services/api';
 import {
   Box,
   Typography,
@@ -52,6 +53,173 @@ const Prediction = () => {
     'Finalizing predictions output...',
   ];
 
+  // Mode Specific Data — Dynamically calculated from local storage
+  const getModeData = () => {
+    let savedMarks = {};
+    try {
+      const saved = localStorage.getItem('guidance_academic_marks');
+      if (saved) savedMarks = JSON.parse(saved);
+    } catch (e) {}
+
+    let savedAcademics = {};
+    try {
+      const saved = localStorage.getItem('guidance_user_academics');
+      if (saved) savedAcademics = JSON.parse(saved);
+    } catch (e) {}
+
+    let savedProg = {};
+    try {
+      const saved = localStorage.getItem('guidance_user_programming_skills');
+      if (saved) savedProg = JSON.parse(saved);
+    } catch (e) {}
+
+    let savedSoft = {};
+    try {
+      const saved = localStorage.getItem('guidance_user_soft_skills');
+      if (saved) savedSoft = JSON.parse(saved);
+    } catch (e) {}
+
+    const getMark = (sub, def = 70) => savedMarks[sub] !== undefined ? Number(savedMarks[sub]) : def;
+    const getProg = (skill, def = 50) => savedProg[skill] !== undefined ? Number(savedProg[skill]) : def;
+    const getSoft = (skill, def = 50) => savedSoft[skill] !== undefined ? Number(savedSoft[skill]) : def;
+
+    switch (mode) {
+      case 'stream': {
+        const pcm = getMark('Mathematics', 75) * 0.4 + getMark('Science', 75) * 0.4 + getMark('Computer Applications', 70) * 0.2;
+        const pcb = getMark('Science', 75) * 0.6 + getMark('Mathematics', 70) * 0.2 + getMark('English', 70) * 0.2;
+        const commerce = getMark('Mathematics', 70) * 0.3 + getMark('Social Science', 70) * 0.3 + getMark('English', 70) * 0.4;
+        const arts = getMark('Social Science', 70) * 0.5 + getMark('English', 70) * 0.3 + getMark('Hindi', 70) * 0.2;
+
+        const options = [
+          { name: 'Science Elective (PCM with Computer Science)', value: Math.round(pcm || 75), color: '#6366F1' },
+          { name: 'Science with Biology (PCB)', value: Math.round(pcb || 70), color: '#10B981' },
+          { name: 'Commerce with Applied Math', value: Math.round(commerce || 60), color: '#818CF8' },
+          { name: 'Arts with Humanities', value: Math.round(arts || 50), color: '#3B82F6' },
+        ];
+
+        options.sort((a, b) => b.value - a.value);
+        const primary = options[0];
+        const alternatives = options.slice(1);
+        const confidenceVal = Math.min(99, Math.max(70, Math.round(primary.value)));
+
+        const topSubject = getMark('Mathematics', 75) >= getMark('Science', 75) ? 'Mathematics' : 'Science';
+        const topScore = Math.max(getMark('Mathematics', 75), getMark('Science', 75));
+        const descText = `Based on your academic performance, including ${topSubject} (${topScore}%) and Computer Applications (${getMark('Computer Applications', 70)}%), our model identifies "${primary.name}" as your optimal stream. This trajectory aligns with high quantitative ability and interest patterns.`;
+
+        return {
+          title: 'Class 10 Stream Suggestion',
+          subtitle: 'Suggests the ideal subject stream for post-10th grade',
+          predictionName: primary.name,
+          confidence: `${confidenceVal}%`,
+          desc: descText,
+          alternatives: alternatives,
+          radar: [
+            { subject: 'Logical Math', value: getMark('Mathematics', 75), fullMark: 100 },
+            { subject: 'Science Aptitude', value: getMark('Science', 75), fullMark: 100 },
+            { subject: 'Languages', value: Math.round((getMark('English', 70) + getMark('Hindi', 70)) / 2), fullMark: 100 },
+            { subject: 'Creativity', value: getMark('Computer Applications', 70), fullMark: 100 },
+            { subject: 'Analytical', value: Math.round((getMark('Mathematics', 75) + getMark('Science', 75)) / 2), fullMark: 100 },
+          ]
+        };
+      }
+      case 'course': {
+        const cseMl = getMark('Computer Science', 70) * 0.4 + getMark('Mathematics', 75) * 0.4 + getMark('Physics', 75) * 0.2;
+        const dataSci = getMark('Mathematics', 75) * 0.5 + getMark('Computer Science', 70) * 0.3 + getMark('Economics', 70) * 0.2;
+        const electronics = getMark('Physics', 75) * 0.4 + getMark('Mathematics', 75) * 0.4 + getMark('Computer Science', 70) * 0.2;
+        const bio = getMark('Biology', 70) * 0.5 + getMark('Chemistry', 70) * 0.3 + getMark('Physics', 75) * 0.2;
+        const commerce = getMark('Accountancy', 70) * 0.4 + getMark('Business Studies', 70) * 0.3 + getMark('Economics', 70) * 0.3;
+        const humanities = getMark('English', 75) * 0.5 + getMark('Hindi', 70) * 0.3 + getMark('Economics', 70) * 0.2;
+
+        const options = [
+          { name: 'B.Tech in Computer Science & Engineering (AI/ML)', value: Math.round(cseMl || 75), color: '#6366F1' },
+          { name: 'B.Sc in Data Science', value: Math.round(dataSci || 70), color: '#10B981' },
+          { name: 'B.Tech in Electronics & Comm.', value: Math.round(electronics || 65), color: '#818CF8' },
+          { name: 'Bachelor of Medicine / BDS (MBBS)', value: Math.round(bio || 50), color: '#EC4899' },
+          { name: 'Bachelor of Commerce (B.Com Hons)', value: Math.round(commerce || 55), color: '#F59E0B' },
+          { name: 'Bachelor of Arts (Humanities)', value: Math.round(humanities || 45), color: '#3B82F6' },
+        ];
+
+        options.sort((a, b) => b.value - a.value);
+        const primary = options[0];
+        const alternatives = options.slice(1, 4);
+        const confidenceVal = Math.min(99, Math.max(70, Math.round(primary.value)));
+
+        const topSubject = getMark('Mathematics', 75) >= getMark('Computer Science', 70) ? 'Mathematics' : 'Computer Science';
+        const topScore = Math.max(getMark('Mathematics', 75), getMark('Computer Science', 70));
+        const descText = `Recommended based on your subject performance in ${topSubject} (${topScore}%) and Physics (${getMark('Physics', 75)}%). This fits students showing high logical, computational, and technical aptitude.`;
+
+        return {
+          title: 'Undergraduate Course Recommendation',
+          subtitle: 'Suggests suitable Bachelors courses after Class 12th',
+          predictionName: primary.name,
+          confidence: `${confidenceVal}%`,
+          desc: descText,
+          alternatives: alternatives,
+          radar: [
+            { subject: 'Math & Stats', value: getMark('Mathematics', 75), fullMark: 100 },
+            { subject: 'Computer Fundamentals', value: getMark('Computer Science', 70), fullMark: 100 },
+            { subject: 'Physics Core', value: getMark('Physics', 75), fullMark: 100 },
+            { subject: 'Logical Deductions', value: Math.round((getMark('Mathematics', 75) + getMark('Computer Science', 70)) / 2), fullMark: 100 },
+            { subject: 'Communication', value: getMark('English', 75), fullMark: 100 },
+          ]
+        };
+      }
+      case 'career':
+      default: {
+        const dsMark = getMark('Data Structures', 70);
+        const osMark = getMark('Operating Systems', 70);
+        const dbMark = getMark('Database Management', 70);
+        const mlMark = getMark('Machine Learning', 70);
+        const aiMark = getMark('Artificial Intelligence', 70);
+        const cloudMark = getMark('Cloud Computing', 70);
+        const cyberMark = getMark('Cyber Security', 70);
+
+        const mle = (getProg('Python', 50) * 0.3) + (getSoft('Problem Solving', 50) * 0.3) + (mlMark * 0.2) + (aiMark * 0.2);
+        const ds = (getProg('Python', 50) * 0.3) + (getProg('SQL', 50) * 0.3) + (dbMark * 0.2) + (getSoft('Problem Solving', 50) * 0.2);
+        const fs = (getProg('JavaScript', 50) * 0.4) + (getProg('SQL', 50) * 0.2) + (dsMark * 0.2) + (getSoft('Problem Solving', 50) * 0.2);
+        const devops = (cloudMark * 0.3) + (osMark * 0.3) + (getProg('Java', 50) * 0.2) + (getSoft('Team Work', 50) * 0.2);
+        const cyber = (cyberMark * 0.4) + (getSoft('Critical Thinking', 50) * 0.3) + (osMark * 0.3);
+        const pm = (getSoft('Leadership', 50) * 0.4) + (getSoft('Communication', 50) * 0.3) + (getSoft('Team Work', 50) * 0.3);
+
+        const options = [
+          { name: 'Machine Learning Engineer', value: Math.round(mle || 75), color: '#6366F1' },
+          { name: 'Data Scientist', value: Math.round(ds || 70), color: '#10B981' },
+          { name: 'Full Stack Engineer', value: Math.round(fs || 65), color: '#818CF8' },
+          { name: 'DevOps Cloud Engineer', value: Math.round(devops || 60), color: '#EC4899' },
+          { name: 'Cyber Security Analyst', value: Math.round(cyber || 55), color: '#F59E0B' },
+          { name: 'Product/Project Manager', value: Math.round(pm || 50), color: '#3B82F6' },
+        ];
+
+        options.sort((a, b) => b.value - a.value);
+        const primary = options[0];
+        const alternatives = options.slice(1, 4);
+        const confidenceVal = Math.min(99, Math.max(70, Math.round(primary.value)));
+
+        const descText = `Identified as the highest-matching career. Backed by solid technical foundation including Programming (${Math.round((getProg('Python') + getProg('Java') + getProg('C++') + getProg('JavaScript')) / 4)}%), Problem Solving (${getSoft('Problem Solving')}%), and academic specialization scores.`;
+
+        return {
+          title: 'Post-College Career Path Prediction',
+          subtitle: 'Forecasts target industry jobs for undergraduate students',
+          predictionName: primary.name,
+          confidence: `${confidenceVal}%`,
+          desc: descText,
+          alternatives: alternatives,
+          radar: [
+            { subject: 'Algorithms & Dev', value: Math.round((getProg('Python') + getProg('Java') + getProg('JavaScript')) / 3), fullMark: 100 },
+            { subject: 'Applied Systems', value: Math.round((osMark + dbMark) / 2), fullMark: 100 },
+            { subject: 'Soft Skills', value: Math.round((getSoft('Communication') + getSoft('Leadership') + getSoft('Team Work')) / 3), fullMark: 100 },
+            { subject: 'Databases (SQL)', value: getProg('SQL'), fullMark: 100 },
+            { subject: 'Specialization', value: Math.max(mlMark, aiMark, cloudMark, cyberMark), fullMark: 100 },
+          ]
+        };
+      }
+    }
+  };
+
+  const [mlResult, setMlResult] = useState(null);
+
+  const currentData = mlResult || getModeData();
+
   // Auto trigger steps when loading is true
   useEffect(() => {
     let interval;
@@ -63,14 +231,17 @@ const Prediction = () => {
             setLoading(false);
             setPredicted(true);
             
-            // Save prediction to localStorage
-            let predictionName = 'Machine Learning Engineer';
-            if (mode === 'stream') {
-              predictionName = 'Science Elective (PCM with Computer Science)';
-            } else if (mode === 'course') {
-              predictionName = 'B.Tech in Computer Science & Engineering (AI/ML)';
-            }
+            // Check if backend returned real ML predictions
+            const finalResult = window.__pendingPredictionResult || getModeData();
+            setMlResult(finalResult);
+            
+            // Save computed prediction to localStorage and DB
+            const predictionName = finalResult.predictionName;
             localStorage.setItem('guidance_user_prediction', predictionName);
+            saveGuidanceData({ prediction: predictionName });
+            
+            // Clear reference
+            delete window.__pendingPredictionResult;
             
             return 0;
           }
@@ -83,82 +254,82 @@ const Prediction = () => {
 
   const handlePredict = () => {
     setPredicted(false);
+    setMlResult(null);
     setLoadingStep(0);
     setLoading(true);
+
+    // Fetch predictions from Python/scikit-learn backend asynchronously
+    let savedMarks = {};
+    try {
+      const saved = localStorage.getItem('guidance_academic_marks');
+      if (saved) savedMarks = JSON.parse(saved);
+    } catch (e) {}
+
+    let savedProg = {};
+    try {
+      const saved = localStorage.getItem('guidance_user_programming_skills');
+      if (saved) savedProg = JSON.parse(saved);
+    } catch (e) {}
+
+    let savedSoft = {};
+    try {
+      const saved = localStorage.getItem('guidance_user_soft_skills');
+      if (saved) savedSoft = JSON.parse(saved);
+    } catch (e) {}
+
+    let academicsObj = {};
+    try {
+      const saved = localStorage.getItem('guidance_user_academics');
+      if (saved) academicsObj = JSON.parse(saved);
+    } catch (e) {}
+
+    const currentEd = academicsObj.currentEducation || "";
+
+    // Extract flat marks for the current education level from nested structure
+    let flatMarks = savedMarks;
+    if (savedMarks && savedMarks[currentEd]) {
+      // Nested format: marks are keyed by education level
+      flatMarks = savedMarks[currentEd];
+    } else if (savedMarks) {
+      // Check if first key is a level name (nested), and pick appropriate one
+      const firstKey = Object.keys(savedMarks)[0];
+      const knownLevels = ['Class 10', 'Class 12', 'Undergraduate', 'Undergraduate (Commerce)', 'Graduate'];
+      if (firstKey && knownLevels.includes(firstKey)) {
+        flatMarks = savedMarks[currentEd] || {};
+      }
+    }
+
+    let savedInterests = [];
+    try {
+      const saved = localStorage.getItem('guidance_user_interests');
+      if (saved) savedInterests = JSON.parse(saved);
+    } catch (e) {}
+
+    const payload = {
+      mode,
+      currentEducation: currentEd,
+      marks: flatMarks,
+      programmingSkills: savedProg,
+      softSkills: savedSoft,
+      interests: savedInterests
+    };
+
+    getMLPrediction(payload)
+      .then((res) => {
+        if (res && !res.error) {
+          window.__pendingPredictionResult = res;
+        } else {
+          console.warn("ML API backend error. Falling back to rule engine.", res);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch backend ML predictions. Falling back.", err);
+      });
   };
 
   const handleDownload = () => {
     setToastOpen(true);
   };
-
-  // Mode Specific Data
-  const getModeData = () => {
-    switch (mode) {
-      case 'stream':
-        return {
-          title: 'Class 10 Stream Suggestion',
-          subtitle: 'Suggests the ideal subject stream for post-10th grade',
-          predictionName: 'Science Elective (PCM with Computer Science)',
-          confidence: '95%',
-          desc: 'Based on high marks in Mathematics (92%) and Computer Science (95%), combined with cognitive interest in AI and Robotics.',
-          alternatives: [
-            { name: 'Science with Biology (PCB)', value: 68, color: '#6366F1' },
-            { name: 'Commerce with Applied Math', value: 55, color: '#10B981' },
-            { name: 'Arts with Humanities', value: 34, color: '#818CF8' },
-          ],
-          radar: [
-            { subject: 'Logical Math', value: 92, fullMark: 100 },
-            { subject: 'Science Aptitude', value: 85, fullMark: 100 },
-            { subject: 'Languages', value: 78, fullMark: 100 },
-            { subject: 'Creativity', value: 80, fullMark: 100 },
-            { subject: 'Analytical', value: 88, fullMark: 100 },
-          ]
-        };
-      case 'course':
-        return {
-          title: 'Undergraduate Course Recommendation',
-          subtitle: 'Suggests suitable Bachelors courses after Class 12th',
-          predictionName: 'B.Tech in Computer Science & Engineering (AI/ML)',
-          confidence: '91%',
-          desc: 'Recommended based on mathematical analytical scores (92%), programming proficiency (Python 85%), and self-stated interest in AI/Machine Learning.',
-          alternatives: [
-            { name: 'B.Tech in Information Technology', value: 85, color: '#6366F1' },
-            { name: 'B.Sc in Data Science', value: 78, color: '#10B981' },
-            { name: 'B.Tech in Electronics & Comm.', value: 60, color: '#818CF8' },
-          ],
-          radar: [
-            { subject: 'Math & Stats', value: 92, fullMark: 100 },
-            { subject: 'Computer Fundamentals', value: 88, fullMark: 100 },
-            { subject: 'Physics Core', value: 85, fullMark: 100 },
-            { subject: 'Logical Deductions', value: 90, fullMark: 100 },
-            { subject: 'Communication', value: 80, fullMark: 100 },
-          ]
-        };
-      case 'career':
-      default:
-        return {
-          title: 'Post-College Career Path Prediction',
-          subtitle: 'Forecasts target industry jobs for undergraduate students',
-          predictionName: 'Machine Learning Engineer',
-          confidence: '94%',
-          desc: 'Identified as the highest-matching career. Backed by solid data structures foundations, top-percentile problem solving skills (92%), and multiple completed AI projects.',
-          alternatives: [
-            { name: 'Data Scientist', value: 88, color: '#6366F1' },
-            { name: 'Full Stack Engineer', value: 75, color: '#10B981' },
-            { name: 'DevOps Cloud Engineer', value: 64, color: '#818CF8' },
-          ],
-          radar: [
-            { subject: 'Algorithms & Python', value: 85, fullMark: 100 },
-            { subject: 'Applied Math', value: 92, fullMark: 100 },
-            { subject: 'Soft Skills', value: 80, fullMark: 100 },
-            { subject: 'Databases (SQL)', value: 75, fullMark: 100 },
-            { subject: 'Software Architecture', value: 70, fullMark: 100 },
-          ]
-        };
-    }
-  };
-
-  const currentData = getModeData();
 
   return (
     <RouteTransition>

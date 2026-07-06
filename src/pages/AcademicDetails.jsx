@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,TextField,
@@ -10,29 +10,101 @@ import {
   List,
   ListItem,
   ListItemText,
-  IconButton} from '@mui/material';
+  IconButton,
+  Chip} from '@mui/material';
 import {
   Delete as DeleteIcon,
   Add as AddIcon,
   School as SchoolIcon,
   AccessTime as TimeIcon,
   Favorite as HeartIcon,
-  WorkspacePremium as AchievementIcon} from '@mui/icons-material';
+  WorkspacePremium as AchievementIcon,
+  SwapHoriz as SwapIcon} from '@mui/icons-material';
 import RouteTransition from '../components/RouteTransition';
 import GlassCard from '../components/GlassCard';
+import { getGuidanceData, saveGuidanceData } from '../services/api';
+
+/* ── Subject mapping per education level ────────────────────────────── */
+const SUBJECTS_BY_LEVEL = {
+  'Class 10': [
+    'Mathematics', 'Science', 'Social Science', 'English',
+    'Hindi', 'Computer Applications',
+  ],
+  'Class 12': [
+    'Mathematics', 'Physics', 'Chemistry', 'English',
+    'Computer Science', 'Biology', 'Accountancy',
+    'Business Studies', 'Economics', 'Hindi',
+  ],
+  'Undergraduate': [
+    'Mathematics', 'Physics', 'Chemistry', 'English',
+    'Computer Science', 'Electronics', 'Data Structures',
+    'Operating Systems', 'Database Management', 'Statistics',
+  ],
+  'Undergraduate (Commerce)': [
+    'Financial Accounting', 'Corporate Laws', 'Business Statistics',
+    'Macroeconomics', 'Cost Accounting', 'Corporate Finance',
+    'Auditing', 'Marketing Management', 'Human Resource Management',
+  ],
+  'Graduate': [
+    'Machine Learning', 'Data Science', 'Artificial Intelligence',
+    'Advanced Mathematics', 'Research Methodology', 'Computer Networks',
+    'Cloud Computing', 'Cyber Security', 'Software Engineering',
+  ],
+};
+
+const DEFAULT_LEVEL = 'Class 10';
+
+/* ── Helper: build a zero-marks object from a subject list ──────────── */
+const buildDefaultMarks = (subjects) =>
+  subjects.reduce((acc, sub) => ({ ...acc, [sub]: 0 }), {});
+
+/* ── Read education level from Profile's localStorage store ─────────── */
+const readEducationLevel = () => {
+  try {
+    const raw = localStorage.getItem('guidance_user_academics');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.currentEducation && SUBJECTS_BY_LEVEL[parsed.currentEducation]) {
+        return parsed.currentEducation;
+      }
+    }
+  } catch { /* ignore parse errors */ }
+  return DEFAULT_LEVEL;
+};
 
 const AcademicDetails = () => {
   const [toastOpen, setToastOpen] = useState(false);
 
-  // Academic marks / grades (1 - 100)
+  /* ── Education level (synced from Profile page) ───────────────────── */
+  const [educationLevel, setEducationLevel] = useState(readEducationLevel);
+
+  /* ── Derive available subjects from the level ─────────────────────── */
+  const availableSubjects = SUBJECTS_BY_LEVEL[educationLevel] || SUBJECTS_BY_LEVEL[DEFAULT_LEVEL];
+
+  /* ── Academic marks / grades (1 – 100) ────────────────────────────── */
   const [marks, setMarks] = useState(() => {
-    const saved = localStorage.getItem('guidance_academic_marks');
-    return saved ? JSON.parse(saved) : {
-      Mathematics: 0,
-      Physics: 0,
-      Chemistry: 0,
-      English: 0,
-      'Computer Science': 0};
+    let savedMarks = {};
+    try {
+      const saved = localStorage.getItem('guidance_academic_marks');
+      if (saved) savedMarks = JSON.parse(saved);
+    } catch { /* ignore */ }
+
+    // Always build a nested structure for all levels to isolate marks
+    const result = {};
+    Object.keys(SUBJECTS_BY_LEVEL).forEach((level) => {
+      result[level] = {};
+      const subjects = SUBJECTS_BY_LEVEL[level];
+      subjects.forEach((sub) => {
+        if (savedMarks[level] && savedMarks[level][sub] !== undefined) {
+          result[level][sub] = savedMarks[level][sub];
+        } else if (savedMarks[sub] !== undefined && level === DEFAULT_LEVEL) {
+          result[level][sub] = savedMarks[sub];
+        } else {
+          result[level][sub] = 0;
+        }
+      });
+    });
+    return result;
   });
 
   const [attendance, setAttendance] = useState(() => {
@@ -49,19 +121,96 @@ const AcademicDetails = () => {
     const saved = localStorage.getItem('guidance_academic_fav_subject');
     return saved || '';
   });
-  
+
   const [achievementInput, setAchievementInput] = useState('');
   const [achievements, setAchievements] = useState(() => {
     const saved = localStorage.getItem('guidance_academic_achievements');
     return saved ? JSON.parse(saved) : [];
   });
 
-  const handleSave = () => {
+  /* ── When the education level changes ──────────────────────────────── */
+  const handleLevelChange = useCallback((newLevel) => {
+    setEducationLevel(newLevel);
+    const subjects = SUBJECTS_BY_LEVEL[newLevel] || SUBJECTS_BY_LEVEL[DEFAULT_LEVEL];
+
+    // Ensure this level has entries in nested marks (in case it was never initialised)
+    setMarks((prev) => {
+      if (prev[newLevel]) return prev;
+      const next = { ...prev, [newLevel]: {} };
+      subjects.forEach((sub) => { next[newLevel][sub] = 0; });
+      return next;
+    });
+
+    // Reset favourite if current pick is not in the new list
+    setFavoriteSubject((prev) => (subjects.includes(prev) ? prev : ''));
+
+    // Also update Profile's localStorage so both pages stay in sync
+    try {
+      const raw = localStorage.getItem('guidance_user_academics');
+      const academics = raw ? JSON.parse(raw) : {};
+      academics.currentEducation = newLevel;
+      localStorage.setItem('guidance_user_academics', JSON.stringify(academics));
+    } catch { /* ignore */ }
+  }, []);
+
+  /* ── Sync and load data from backend / Profile's storage on mount ── */
+  useEffect(() => {
+    const loadData = async () => {
+      const data = await getGuidanceData();
+      if (data && data.academics) {
+        if (data.academics.currentEducation) setEducationLevel(data.academics.currentEducation);
+        if (data.academics.marks) {
+          setMarks((prev) => {
+            const incoming = data.academics.marks;
+            // Check if incoming marks are already nested (keyed by level)
+            const firstKey = Object.keys(incoming)[0];
+            if (firstKey && SUBJECTS_BY_LEVEL[firstKey]) {
+              // Already nested – merge with defaults
+              const merged = { ...prev };
+              Object.keys(incoming).forEach((level) => {
+                merged[level] = { ...(prev[level] || {}), ...incoming[level] };
+              });
+              return merged;
+            }
+            // Legacy flat format – place under current level
+            const level = data.academics.currentEducation || readEducationLevel();
+            return { ...prev, [level]: { ...(prev[level] || {}), ...incoming } };
+          });
+        }
+        if (data.academics.attendance !== undefined) setAttendance(Number(data.academics.attendance));
+        if (data.academics.studyHours !== undefined) setStudyHours(Number(data.academics.studyHours));
+        if (data.academics.favSubject !== undefined) setFavoriteSubject(data.academics.favSubject);
+        if (data.academics.achievements) setAchievements(data.academics.achievements);
+      } else {
+        const storedLevel = readEducationLevel();
+        if (storedLevel !== educationLevel) {
+          handleLevelChange(storedLevel);
+        }
+      }
+    };
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSave = async () => {
     localStorage.setItem('guidance_academic_marks', JSON.stringify(marks));
     localStorage.setItem('guidance_academic_attendance', attendance.toString());
     localStorage.setItem('guidance_academic_study_hours', studyHours.toString());
     localStorage.setItem('guidance_academic_fav_subject', favoriteSubject);
     localStorage.setItem('guidance_academic_achievements', JSON.stringify(achievements));
+    
+    // Save all fields to MongoDB backend
+    await saveGuidanceData({
+      academics: {
+        currentEducation: educationLevel,
+        marks,
+        attendance,
+        studyHours,
+        favSubject: favoriteSubject,
+        achievements
+      }
+    });
+    
     setToastOpen(true);
   };
 
@@ -92,8 +241,40 @@ const AcademicDetails = () => {
         </Button>
       </Box>
 
+      {/* ── Education Level Selector ──────────────────────────────────── */}
+      <Box sx={{ mb: 3 }}>
+        <GlassCard>
+          <Box sx={{ p: 3 }} display="flex" alignItems="center" gap={2} flexWrap="wrap">
+            <SwapIcon sx={{ color: 'secondary.main' }} />
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mr: 1 }}>
+              Current Education Level
+            </Typography>
+            <TextField
+              select
+              size="small"
+              value={educationLevel}
+              onChange={(e) => handleLevelChange(e.target.value)}
+              sx={{ minWidth: 220 }}
+            >
+              {Object.keys(SUBJECTS_BY_LEVEL).map((level) => (
+                <MenuItem key={level} value={level}>
+                  {level}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Chip
+              label={`${availableSubjects.length} subjects`}
+              size="small"
+              color="primary"
+              variant="outlined"
+              sx={{ ml: 'auto' }}
+            />
+          </Box>
+        </GlassCard>
+      </Box>
+
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-        
+
         {/* Subject-Wise Performance */}
         <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 calc(50% - 16px)' }, minWidth: 0 }}>
           <GlassCard sx={{ height: '100%' }}>
@@ -102,17 +283,20 @@ const AcademicDetails = () => {
               <Typography variant="h6" fontWeight={700}>Subject Marks / Grades</Typography>
             </Box>
             <Box sx={{ p: 3 }} display="flex" flexDirection="column" gap={3}>
-              {Object.keys(marks).map((sub) => (
+              {availableSubjects.map((sub) => (
                 <Box key={sub}>
                   <Box sx={{ mb: 1 }} display="flex" justifyContent="space-between">
                     <Typography variant="body2" fontWeight={600}>{sub}</Typography>
                     <Typography variant="body2" color="secondary" fontWeight={700}>
-                      {marks[sub]} / 100
+                      {(marks[educationLevel] && marks[educationLevel][sub]) || 0} / 100
                     </Typography>
                   </Box>
                   <Slider
-                    value={marks[sub]}
-                    onChange={(e, val) => setMarks({ ...marks, [sub]: val })}
+                    value={(marks[educationLevel] && marks[educationLevel][sub]) || 0}
+                    onChange={(e, val) => setMarks({
+                      ...marks,
+                      [educationLevel]: { ...(marks[educationLevel] || {}), [sub]: val }
+                    })}
                     color="secondary"
                     valueLabelDisplay="auto"
                   />
@@ -157,7 +341,7 @@ const AcademicDetails = () => {
                     onChange={(e) => setStudyHours(e.target.value)}
                   />
                 </Box>
-                {/* Favorite Subject Dropdown */}
+                {/* Favorite Subject Dropdown — now uses dynamic subjects */}
                 <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 16px)' }, minWidth: 0 }}>
                   <TextField
                     fullWidth
@@ -166,7 +350,7 @@ const AcademicDetails = () => {
                     value={favoriteSubject}
                     onChange={(e) => setFavoriteSubject(e.target.value)}
                   >
-                    {Object.keys(marks).map((sub) => (
+                    {availableSubjects.map((sub) => (
                       <MenuItem key={sub} value={sub}>
                         {sub}
                       </MenuItem>
@@ -232,3 +416,4 @@ const AcademicDetails = () => {
 };
 
 export default AcademicDetails;
+

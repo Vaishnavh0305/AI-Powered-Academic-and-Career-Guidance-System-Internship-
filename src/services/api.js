@@ -10,6 +10,32 @@ export const checkBackendStatus = async () => {
   }
 };
 
+// Helper to construct complete academics payload containing both profile and marks states
+const getAcademicsState = () => {
+  const base = JSON.parse(localStorage.getItem('guidance_user_academics') || '{}');
+  
+  try {
+    const marks = localStorage.getItem('guidance_academic_marks');
+    if (marks && marks !== 'true') base.marks = JSON.parse(marks);
+  } catch(e){}
+  
+  const att = localStorage.getItem('guidance_academic_attendance');
+  if (att) base.attendance = att;
+  
+  const hrs = localStorage.getItem('guidance_academic_study_hours');
+  if (hrs) base.studyHours = hrs;
+  
+  const fav = localStorage.getItem('guidance_academic_fav_subject');
+  if (fav) base.favSubject = fav;
+  
+  try {
+    const achievements = localStorage.getItem('guidance_academic_achievements');
+    if (achievements) base.achievements = JSON.parse(achievements);
+  } catch(e){}
+  
+  return base;
+};
+
 // Fetch data from MongoDB (with localStorage fallback)
 export const getGuidanceData = async () => {
   try {
@@ -20,10 +46,17 @@ export const getGuidanceData = async () => {
       if (data.personalInfo) localStorage.setItem('guidance_user_profile', JSON.stringify(data.personalInfo));
       if (data.academics) {
         localStorage.setItem('guidance_user_academics', JSON.stringify(data.academics));
-        localStorage.setItem('guidance_academic_marks', 'true');
+        
+        // Extract and populate individual keys for AcademicDetails page
+        if (data.academics.marks) localStorage.setItem('guidance_academic_marks', JSON.stringify(data.academics.marks));
+        if (data.academics.attendance !== undefined) localStorage.setItem('guidance_academic_attendance', data.academics.attendance.toString());
+        if (data.academics.studyHours !== undefined) localStorage.setItem('guidance_academic_study_hours', data.academics.studyHours.toString());
+        if (data.academics.favSubject !== undefined) localStorage.setItem('guidance_academic_fav_subject', data.academics.favSubject);
+        if (data.academics.achievements) localStorage.setItem('guidance_academic_achievements', JSON.stringify(data.academics.achievements));
       }
       if (data.programmingSkills) localStorage.setItem('guidance_user_programming_skills', JSON.stringify(data.programmingSkills));
       if (data.softSkills) localStorage.setItem('guidance_user_soft_skills', JSON.stringify(data.softSkills));
+      if (data.interests) localStorage.setItem('guidance_user_interests', JSON.stringify(data.interests));
       if (data.certs) localStorage.setItem('guidance_user_certs', JSON.stringify(data.certs));
       if (data.prediction) localStorage.setItem('guidance_user_prediction', data.prediction);
       return data;
@@ -35,9 +68,10 @@ export const getGuidanceData = async () => {
   // Fallback to local storage
   return {
     personalInfo: JSON.parse(localStorage.getItem('guidance_user_profile') || '{}'),
-    academics: JSON.parse(localStorage.getItem('guidance_user_academics') || '{}'),
+    academics: getAcademicsState(),
     programmingSkills: JSON.parse(localStorage.getItem('guidance_user_programming_skills') || '{}'),
     softSkills: JSON.parse(localStorage.getItem('guidance_user_soft_skills') || '{}'),
+    interests: JSON.parse(localStorage.getItem('guidance_user_interests') || '[]'),
     certs: JSON.parse(localStorage.getItem('guidance_user_certs') || '[]'),
     prediction: localStorage.getItem('guidance_user_prediction') || 'None',
   };
@@ -50,8 +84,19 @@ export const saveGuidanceData = async (updatedFields) => {
     localStorage.setItem('guidance_user_profile', JSON.stringify(updatedFields.personalInfo));
   }
   if (updatedFields.academics) {
-    localStorage.setItem('guidance_user_academics', JSON.stringify(updatedFields.academics));
-    localStorage.setItem('guidance_academic_marks', 'true');
+    // Write full academics details to guidance_user_academics
+    const currentFullAcademics = {
+      ...getAcademicsState(),
+      ...updatedFields.academics
+    };
+    localStorage.setItem('guidance_user_academics', JSON.stringify(currentFullAcademics));
+    
+    // Also update individual keys in localStorage
+    if (updatedFields.academics.marks) localStorage.setItem('guidance_academic_marks', JSON.stringify(updatedFields.academics.marks));
+    if (updatedFields.academics.attendance !== undefined) localStorage.setItem('guidance_academic_attendance', updatedFields.academics.attendance.toString());
+    if (updatedFields.academics.studyHours !== undefined) localStorage.setItem('guidance_academic_study_hours', updatedFields.academics.studyHours.toString());
+    if (updatedFields.academics.favSubject !== undefined) localStorage.setItem('guidance_academic_fav_subject', updatedFields.academics.favSubject);
+    if (updatedFields.academics.achievements) localStorage.setItem('guidance_academic_achievements', JSON.stringify(updatedFields.academics.achievements));
   }
   if (updatedFields.programmingSkills) {
     localStorage.setItem('guidance_user_programming_skills', JSON.stringify(updatedFields.programmingSkills));
@@ -62,6 +107,9 @@ export const saveGuidanceData = async (updatedFields) => {
   if (updatedFields.certs) {
     localStorage.setItem('guidance_user_certs', JSON.stringify(updatedFields.certs));
   }
+  if (updatedFields.interests) {
+    localStorage.setItem('guidance_user_interests', JSON.stringify(updatedFields.interests));
+  }
   if (updatedFields.prediction) {
     localStorage.setItem('guidance_user_prediction', updatedFields.prediction);
   }
@@ -69,12 +117,18 @@ export const saveGuidanceData = async (updatedFields) => {
   // Next, gather full state to send to backend
   const fullPayload = {
     personalInfo: JSON.parse(localStorage.getItem('guidance_user_profile') || '{}'),
-    academics: JSON.parse(localStorage.getItem('guidance_user_academics') || '{}'),
+    academics: getAcademicsState(),
     programmingSkills: JSON.parse(localStorage.getItem('guidance_user_programming_skills') || '{}'),
     softSkills: JSON.parse(localStorage.getItem('guidance_user_soft_skills') || '{}'),
+    interests: JSON.parse(localStorage.getItem('guidance_user_interests') || '[]'),
     certs: JSON.parse(localStorage.getItem('guidance_user_certs') || '[]'),
     prediction: localStorage.getItem('guidance_user_prediction') || 'None',
-    ...updatedFields
+    ...updatedFields,
+    // Ensure nested academics object is fully populated
+    academics: {
+      ...getAcademicsState(),
+      ...(updatedFields.academics || {})
+    }
   };
 
   try {
@@ -93,4 +147,23 @@ export const saveGuidanceData = async (updatedFields) => {
   }
 
   return fullPayload;
+};
+
+// Fetch dynamic prediction from scikit-learn ML backend
+export const getMLPrediction = async (payload) => {
+  try {
+    const res = await fetch('http://localhost:5001/api/predict', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (error) {
+    console.error('Failed to connect to backend ML prediction API', error);
+  }
+  return null;
 };
