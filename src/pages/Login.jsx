@@ -8,13 +8,11 @@ import {
   FormControlLabel,
   Checkbox,
   Link,
-  Divider,
   Container,
   IconButton,
   InputAdornment,
 } from '@mui/material';
 import {
-  Google as GoogleIcon,
   Visibility,
   VisibilityOff,
   AutoAwesome as AIIcon,
@@ -73,54 +71,6 @@ const Login = () => {
       });
   };
 
-  const handleGoogleLogin = (isAdminUser) => {
-    const demoEmail = isAdminUser ? 'admin@antigravity.edu' : 'student@antigravity.edu';
-    const demoName = isAdminUser ? 'Admin Portal Manager' : 'Jane Doe';
-    const demoPass = 'password123';
-
-    loginUser({ email: demoEmail, password: demoPass })
-      .then((res) => {
-        if (res && res.error) {
-          // Self-initialize demo account if not exists
-          registerUser({
-            name: demoName,
-            email: demoEmail,
-            password: demoPass,
-            educationLevel: isAdminUser ? 'Graduate' : 'Undergraduate'
-          }).then(() => {
-            loginUser({ email: demoEmail, password: demoPass }).then(finalRes => {
-              if (finalRes && !finalRes.error) {
-                const profile = {
-                  email: demoEmail,
-                  name: demoName,
-                  isAdmin: isAdminUser
-                };
-                localStorage.setItem('guidance_user_profile', JSON.stringify(profile));
-                navigate('/dashboard');
-              }
-            });
-          });
-        } else {
-          const profile = {
-            email: demoEmail,
-            name: demoName,
-            isAdmin: isAdminUser
-          };
-          localStorage.setItem('guidance_user_profile', JSON.stringify(profile));
-          navigate('/dashboard');
-        }
-      })
-      .catch(() => {
-        // Fallback
-        const profile = {
-          email: demoEmail,
-          name: demoName,
-          isAdmin: isAdminUser
-        };
-        localStorage.setItem('guidance_user_profile', JSON.stringify(profile));
-        navigate('/dashboard');
-      });
-  };
 
   return (
     <RouteTransition>
@@ -252,52 +202,6 @@ const Login = () => {
                 Sign In
               </Button>
 
-              <Divider sx={{ mb: 3, opacity: 0.1 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>
-                  OR
-                </Typography>
-              </Divider>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<GoogleIcon />}
-                onClick={() => handleGoogleLogin(false)}
-                size="large"
-                sx={{
-                  py: 1.5,
-                  mb: 2,
-                  color: 'text.primary',
-                  borderColor: 'rgba(255,255,255,0.1)',
-                  '&:hover': {
-                    borderColor: 'rgba(255,255,255,0.25)',
-                    background: 'rgba(255,255,255,0.03)',
-                  },
-                }}
-              >
-                Continue with Google
-              </Button>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                color="secondary"
-                startIcon={<GoogleIcon />}
-                onClick={() => handleGoogleLogin(true)}
-                size="large"
-                sx={{
-                  py: 1.5,
-                  mb: 3,
-                  color: 'secondary.main',
-                  borderColor: 'rgba(16, 185, 129, 0.2)',
-                  '&:hover': {
-                    borderColor: 'rgba(16, 185, 129, 0.4)',
-                    background: 'rgba(16, 185, 129, 0.05)',
-                  },
-                }}
-              >
-                Sign In as Admin with Google
-              </Button>
             </Box>
 
             <Typography variant="body2" color="text.secondary">
