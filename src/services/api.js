@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:5001/api/guidance';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_URL = `${BASE_URL}/api/guidance`;
 
 // Helper to check if backend server is online and operational
 export const checkBackendStatus = async () => {
@@ -49,7 +50,7 @@ const getUserEmail = () => {
 // Register new user with backend MongoDB database
 export const registerUser = async (user) => {
   try {
-    const res = await fetch('http://localhost:5001/api/auth/register', {
+    const res = await fetch(`${BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(user)
@@ -63,7 +64,7 @@ export const registerUser = async (user) => {
 // Authenticate user with backend MongoDB database
 export const loginUser = async (credentials) => {
   try {
-    const res = await fetch('http://localhost:5001/api/auth/login', {
+    const res = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials)
@@ -227,7 +228,7 @@ export const saveGuidanceData = async (updatedFields) => {
 // Fetch dynamic prediction from scikit-learn ML backend
 export const getMLPrediction = async (payload) => {
   try {
-    const res = await fetch('http://localhost:5001/api/predict', {
+    const res = await fetch(`${BASE_URL}/api/predict`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
