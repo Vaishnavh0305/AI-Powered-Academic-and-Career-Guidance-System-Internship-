@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://ai-powered-academic-and-career-guidance-yu9s.onrender.com';
 const API_URL = `${BASE_URL}/api/guidance`;
 
 // Helper to check if backend server is online and operational
