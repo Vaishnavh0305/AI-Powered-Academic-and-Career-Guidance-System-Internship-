@@ -44,14 +44,15 @@ const Prediction = () => {
   const [loadingStep, setLoadingStep] = useState(0);
   const [predicted, setPredicted] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
   const loadingMessages = [
-    'Initializing Neural Weights...',
-    'Parsing student academic record database...',
-    'Comparing skills index to 50,000+ graduates profile...',
-    'Running XGBoost Random Forest classifiers...',
-    'Constructing career timeline roadmap...',
-    'Finalizing predictions output...',
+    'Loading best-fit ML model via pickle...',
+    'Parsing student academic records & skill scores...',
+    'Matching profile against 5,000+ student training dataset...',
+    'Comparing Logistic Regression, KNN & Random Forest classifiers...',
+    'Computing class probabilities & ranking predictions...',
+    'Finalizing prediction output...',
   ];
 
   // Mode Specific Data — Dynamically calculated from local storage
@@ -436,8 +437,44 @@ const Prediction = () => {
   }, [loading, mode]);
 
   const handlePredict = () => {
+    setValidationError('');
     setPredicted(false);
     setMlResult(null);
+
+    // Validate that user has entered required data
+    let savedMarksCheck = {};
+    try {
+      const saved = localStorage.getItem('guidance_academic_marks');
+      if (saved) savedMarksCheck = JSON.parse(saved);
+    } catch (e) {}
+
+    let academicsCheck = {};
+    try {
+      const saved = localStorage.getItem('guidance_user_academics');
+      if (saved) academicsCheck = JSON.parse(saved);
+    } catch (e) {}
+
+    const currentEdCheck = academicsCheck.currentEducation || '';
+
+    // Determine which level marks are needed
+    let requiredLevel = currentEdCheck;
+    if (mode === 'stream') requiredLevel = 'Class 10';
+    else if (mode === 'course') requiredLevel = 'Class 12';
+    else if (mode === 'career' && currentEdCheck !== 'Undergraduate' && currentEdCheck !== 'Undergraduate (Commerce)' && currentEdCheck !== 'Graduate') {
+      requiredLevel = 'Undergraduate';
+    }
+
+    const levelMarks = savedMarksCheck[requiredLevel] || {};
+    const hasMarks = Object.keys(levelMarks).length > 0 && Object.values(levelMarks).some(v => v !== '' && v !== undefined && v !== null);
+
+    if (!hasMarks) {
+      const modeLabels = { stream: 'Class 10', course: 'Class 12', career: 'Undergraduate' };
+      setValidationError(
+        `Please fill in your ${modeLabels[mode] || requiredLevel} academic marks in the "Academic Details" page and your skills in the "Skills Assessment" page before running the prediction.`
+      );
+      return;
+    }
+
     setLoadingStep(0);
     setLoading(true);
 
@@ -667,8 +704,17 @@ const Prediction = () => {
             Ready for AI Guidance Prediction
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 550, mx: 'auto', mb: 4 }}>
-            Click the button below to feed your grades, skill inventory, and personal interests choices to our classification neural pipelines.
+            Click the button below to feed your grades, skill inventory, and personal interests to our ML classification pipeline (Logistic Regression, KNN & Random Forest).
           </Typography>
+          {validationError && (
+            <Alert 
+              severity="warning" 
+              sx={{ mb: 3, maxWidth: 550, mx: 'auto', textAlign: 'left' }}
+              onClose={() => setValidationError('')}
+            >
+              {validationError}
+            </Alert>
+          )}
           <Button 
             variant="contained" 
             color="primary" 

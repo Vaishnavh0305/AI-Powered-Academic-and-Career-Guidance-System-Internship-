@@ -92,6 +92,7 @@ def predict():
     model = model_data["model"]
     features = model_data["features"]
     classes = model_data["classes"]
+    scaler = model_data.get("scaler", None)  # Scaler exists for Logistic Regression & KNN
 
     # 1. Build input feature vector
     input_vector = []
@@ -197,6 +198,10 @@ def predict():
 
     # Reshape for prediction
     X_input = np.array([input_vector])
+    
+    # Apply scaler if model was trained with scaled features (Logistic Regression / KNN)
+    if scaler is not None:
+        X_input = scaler.transform(X_input)
     
     # 2. Run prediction
     pred_label = model.predict(X_input)[0]

@@ -102,8 +102,8 @@ export const getGuidanceData = async () => {
         if (data.academics.favSubject !== undefined) localStorage.setItem('guidance_academic_fav_subject', data.academics.favSubject);
         if (data.academics.achievements) localStorage.setItem('guidance_academic_achievements', JSON.stringify(data.academics.achievements));
       }
-      if (data.programmingSkills) localStorage.setItem('guidance_user_programming_skills', JSON.stringify(data.programmingSkills));
-      if (data.softSkills) localStorage.setItem('guidance_user_soft_skills', JSON.stringify(data.softSkills));
+      if (data.programmingSkills && Object.keys(data.programmingSkills).length > 0) localStorage.setItem('guidance_user_programming_skills', JSON.stringify(data.programmingSkills));
+      if (data.softSkills && Object.keys(data.softSkills).length > 0) localStorage.setItem('guidance_user_soft_skills', JSON.stringify(data.softSkills));
       if (data.interests) localStorage.setItem('guidance_user_interests', JSON.stringify(data.interests));
       if (data.certs) localStorage.setItem('guidance_user_certs', JSON.stringify(data.certs));
       if (data.projects) localStorage.setItem('guidance_user_projects', JSON.stringify(data.projects));

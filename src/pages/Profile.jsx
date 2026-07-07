@@ -57,24 +57,25 @@ const Profile = () => {
       semester: ''};
   });
 
+  const defaultProgrammingSkills = { Python: 0, Java: 0, 'C++': 0, JavaScript: 0, SQL: 0 };
+  const defaultSoftSkills = { Communication: 0, Leadership: 0, 'Problem Solving': 0, 'Critical Thinking': 0, 'Team Work': 0 };
+
   const [programmingSkills, setProgrammingSkills] = useState(() => {
     const saved = localStorage.getItem('guidance_user_programming_skills');
-    return saved ? JSON.parse(saved) : {
-      Python: 0,
-      Java: 0,
-      'C++': 0,
-      JavaScript: 0,
-      SQL: 0};
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...defaultProgrammingSkills, ...parsed };
+    }
+    return { ...defaultProgrammingSkills };
   });
 
   const [softSkills, setSoftSkills] = useState(() => {
     const saved = localStorage.getItem('guidance_user_soft_skills');
-    return saved ? JSON.parse(saved) : {
-      Communication: 0,
-      Leadership: 0,
-      'Problem Solving': 0,
-      'Critical Thinking': 0,
-      'Team Work': 0};
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...defaultSoftSkills, ...parsed };
+    }
+    return { ...defaultSoftSkills };
   });
 
   // Projects, Internships, Hackathons, Certifications tags states
@@ -107,8 +108,12 @@ const Profile = () => {
       const data = await getGuidanceData();
       if (data.personalInfo && Object.keys(data.personalInfo).length > 0) setPersonalInfo(data.personalInfo);
       if (data.academics && Object.keys(data.academics).length > 0) setAcademicDetails(data.academics);
-      if (data.programmingSkills && Object.keys(data.programmingSkills).length > 0) setProgrammingSkills(data.programmingSkills);
-      if (data.softSkills && Object.keys(data.softSkills).length > 0) setSoftSkills(data.softSkills);
+      if (data.programmingSkills && Object.keys(data.programmingSkills).length > 0) {
+        setProgrammingSkills(prev => ({ ...prev, ...data.programmingSkills }));
+      }
+      if (data.softSkills && Object.keys(data.softSkills).length > 0) {
+        setSoftSkills(prev => ({ ...prev, ...data.softSkills }));
+      }
       if (data.certs && data.certs.length > 0) setCerts(data.certs);
       if (data.projects && data.projects.length > 0) setProjects(data.projects);
       if (data.internships && data.internships.length > 0) setInternships(data.internships);
