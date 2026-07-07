@@ -153,7 +153,16 @@ const Profile = () => {
 
   return (
     <RouteTransition>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box 
+        sx={{ 
+          mb: 4, 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          gap: 2, 
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          justifyContent: 'space-between' 
+        }}
+      >
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom sx={{ fontFamily: '"Outfit", sans-serif' }}>
             Student Profile
@@ -173,10 +182,13 @@ const Profile = () => {
         onChange={handleTabChange}
         textColor="secondary"
         indicatorColor="secondary"
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
         sx={{
           mb: 4,
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          '& .MuiTab-root': { fontWeight: 700, fontSize: '0.95rem' }}}
+          '& .MuiTab-root': { fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap' }}}
       >
         <Tab icon={<PersonIcon />} iconPosition="start" label="Personal Info" />
         <Tab icon={<SchoolIcon />} iconPosition="start" label="Academics" />

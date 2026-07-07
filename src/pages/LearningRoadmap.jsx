@@ -133,7 +133,15 @@ const LearningRoadmap = () => {
               <Box sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                   <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 calc(66.667% - 16px)' }, minWidth: 0 }}>
-                    <Box sx={{ mb: 1 }} display="flex" alignItems="center" gap={1.5}>
+                    <Box 
+                      sx={{ 
+                        mb: 1.5, 
+                        display: 'flex', 
+                        flexDirection: { xs: 'column', sm: 'row' }, 
+                        alignItems: { xs: 'flex-start', sm: 'center' }, 
+                        gap: 1.5 
+                      }}
+                    >
                       <Typography variant="h6" fontWeight={700}>
                         {step.title}
                       </Typography>

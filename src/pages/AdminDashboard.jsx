@@ -153,10 +153,13 @@ const AdminDashboard = () => {
         onChange={(e, val) => setActiveTab(val)}
         textColor="secondary"
         indicatorColor="secondary"
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
         sx={{
           mb: 4,
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          '& .MuiTab-root': { fontWeight: 700, fontSize: '0.95rem' }}}
+          '& .MuiTab-root': { fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap' }}}
       >
         <Tab icon={<StudentIcon />} iconPosition="start" label="Manage Students" />
         <Tab icon={<CourseIcon />} iconPosition="start" label="Manage Courses" />
@@ -168,7 +171,7 @@ const AdminDashboard = () => {
       {/* Tab 0: Students Table */}
       {activeTab === 0 && (
         <GlassCard>
-          <TableContainer>
+          <TableContainer component={Box} sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.01)' }}>
                 <TableRow>
@@ -202,7 +205,7 @@ const AdminDashboard = () => {
       {/* Tab 1: Courses Table */}
       {activeTab === 1 && (
         <GlassCard>
-          <TableContainer>
+          <TableContainer component={Box} sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.01)' }}>
                 <TableRow>
@@ -234,7 +237,7 @@ const AdminDashboard = () => {
       {/* Tab 2: Career Domains */}
       {activeTab === 2 && (
         <GlassCard>
-          <TableContainer>
+          <TableContainer component={Box} sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.01)' }}>
                 <TableRow>

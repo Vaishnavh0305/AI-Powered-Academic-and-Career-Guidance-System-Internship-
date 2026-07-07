@@ -14,7 +14,9 @@ import {
   Divider,
   Snackbar,
   Alert,
-  Avatar} from '@mui/material';
+  Avatar,
+  useTheme,
+  useMediaQuery} from '@mui/material';
 import {
   AutoAwesome as AIIcon,
   Analytics as AnalyticsIcon,
@@ -37,6 +39,8 @@ import RouteTransition from '../components/RouteTransition';
 import GlassCard from '../components/GlassCard';
 
 const Prediction = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'career'; // 'stream', 'course', 'career'
 
@@ -465,12 +469,12 @@ const Prediction = () => {
     }
 
     const levelMarks = savedMarksCheck[requiredLevel] || {};
-    const hasMarks = Object.keys(levelMarks).length > 0 && Object.values(levelMarks).some(v => v !== '' && v !== undefined && v !== null);
+    const hasMarks = Object.keys(levelMarks).length > 0 && Object.values(levelMarks).some(v => v !== '' && v !== undefined && v !== null && Number(v) > 0);
 
     if (!hasMarks) {
       const modeLabels = { stream: 'Class 10', course: 'Class 12', career: 'Undergraduate' };
       setValidationError(
-        `Please fill in your ${modeLabels[mode] || requiredLevel} academic marks in the "Academic Details" page and your skills in the "Skills Assessment" page before running the prediction.`
+        `Please fill in your ${modeLabels[mode] || requiredLevel} academic marks in the "Academic Details" page before running the prediction. Prediction is only permitted when academic marks are provided.`
       );
       return;
     }
@@ -673,7 +677,16 @@ const Prediction = () => {
 
   return (
     <RouteTransition>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box 
+        sx={{ 
+          mb: 4, 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          gap: 2, 
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          justifyContent: 'space-between' 
+        }}
+      >
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom sx={{ fontFamily: '"Outfit", sans-serif' }}>
             {currentData.title}
@@ -882,7 +895,7 @@ const Prediction = () => {
 
               <Box sx={{ height: 320, flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="75%" data={currentData.radar}>
+                  <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? "52%" : "72%"} data={currentData.radar}>
                     <PolarGrid stroke="rgba(255,255,255,0.04)" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: '#94A3B8', fontSize: 10 }} />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#64748B', fontSize: 8 }} />

@@ -11,6 +11,7 @@ import {
   Divider,
   Button,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   TrendingUp as PredictionIcon,
@@ -47,6 +48,7 @@ import StatCard from '../components/StatCard';
 const Dashboard = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Load user data dynamically from localStorage
   const savedProfile = JSON.parse(localStorage.getItem('guidance_user_profile') || '{}');
@@ -259,7 +261,7 @@ const Dashboard = () => {
             </Box>
             <Box sx={{ height: 260, py: 2 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={skillData}>
+                <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? "52%" : "72%"} data={skillData}>
                   <PolarGrid stroke="rgba(255,255,255,0.04)" />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: '#94A3B8', fontSize: 10 }} />
                   <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#64748B', fontSize: 8 }} />

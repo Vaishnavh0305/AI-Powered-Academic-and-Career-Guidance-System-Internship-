@@ -92,7 +92,15 @@ const LandingPage = () => {
           <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box display="flex" alignItems="center" gap={1.5} sx={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
               <AIIcon sx={{ color: 'primary.main' }} />
-              <Typography variant="h6" fontWeight={800} sx={{ fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '0.05em' }}>
+              <Typography 
+                variant="h6" 
+                fontWeight={800} 
+                sx={{ 
+                  fontFamily: '"Plus Jakarta Sans", sans-serif', 
+                  letterSpacing: '0.05em',
+                  display: { xs: 'none', sm: 'block' }
+                }}
+              >
                 AI GUIDANCE
               </Typography>
             </Box>
@@ -110,11 +118,28 @@ const LandingPage = () => {
               ))}
             </Box>
 
-            <Box display="flex" gap={2}>
-              <Button variant="outlined" onClick={() => navigate('/login')}>
+            <Box display="flex" gap={{ xs: 1, sm: 2 }}>
+              <Button 
+                variant="outlined" 
+                onClick={() => navigate('/login')}
+                sx={{ 
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  px: { xs: 1.5, sm: 2.5 },
+                  py: { xs: 0.5, sm: 1 }
+                }}
+              >
                 Login
               </Button>
-              <Button variant="contained" color="primary" onClick={() => navigate('/register')}>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                onClick={() => navigate('/register')}
+                sx={{ 
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  px: { xs: 1.5, sm: 2.5 },
+                  py: { xs: 0.5, sm: 1 }
+                }}
+              >
                 Register
               </Button>
             </Box>

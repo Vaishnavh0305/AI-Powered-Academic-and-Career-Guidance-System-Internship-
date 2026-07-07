@@ -27,14 +27,16 @@ const SkillsAssessment = () => {
   // Retrieve user data from local storage
   const hasProfile = !!localStorage.getItem('guidance_user_profile');
   const hasAcademics = !!localStorage.getItem('guidance_academic_marks');
-  const hasProgSkills = !!localStorage.getItem('guidance_user_programming_skills');
-  const hasSoftSkills = !!localStorage.getItem('guidance_user_soft_skills');
+  const progSkillsRaw = localStorage.getItem('guidance_user_programming_skills');
+  const softSkillsRaw = localStorage.getItem('guidance_user_soft_skills');
+  const hasProgSkills = !!progSkillsRaw;
+  const hasSoftSkills = !!softSkillsRaw;
 
   // Verify if baseline data is provided
   const isDataProvided = hasProfile && hasAcademics && (hasProgSkills || hasSoftSkills);
 
-  const savedProg = JSON.parse(hasProgSkills || '{}');
-  const savedSoft = JSON.parse(hasSoftSkills || '{}');
+  const savedProg = progSkillsRaw ? JSON.parse(progSkillsRaw) : {};
+  const savedSoft = softSkillsRaw ? JSON.parse(softSkillsRaw) : {};
   const savedProjects = JSON.parse(localStorage.getItem('guidance_user_projects') || '[]');
   const savedInternships = JSON.parse(localStorage.getItem('guidance_user_internships') || '[]');
   const savedHackathons = JSON.parse(localStorage.getItem('guidance_user_hackathons') || '[]');

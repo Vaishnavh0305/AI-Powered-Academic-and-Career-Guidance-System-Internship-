@@ -29,7 +29,16 @@ const Settings = () => {
 
   return (
     <RouteTransition>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box 
+        sx={{ 
+          mb: 4, 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          gap: 2, 
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          justifyContent: 'space-between' 
+        }}
+      >
         <Box>
           <Typography variant="h4" fontWeight={800} gutterBottom sx={{ fontFamily: '"Outfit", sans-serif' }}>
             System Settings
