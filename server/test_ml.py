@@ -1,9 +1,10 @@
 import json
 import subprocess
+import sys
 
 def run_test(payload):
     process = subprocess.Popen(
-        ["python", "predict.py"],
+        [sys.executable, "predict.py"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

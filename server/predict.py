@@ -172,6 +172,29 @@ def predict():
                 get_val(soft, "Team Work", 70)
             ]
 
+    # ── Interest & Related Marks Boost mapping ──────────────────────────
+    INTEREST_SUBJECTS = {
+        "Artificial Intelligence":    ["Computer Science", "Computer Applications", "Artificial Intelligence", "Machine Learning", "Mathematics"],
+        "Machine Learning":           ["Computer Science", "Computer Applications", "Machine Learning", "Artificial Intelligence", "Mathematics"],
+        "Data Science":               ["Computer Science", "Computer Applications", "Database Management", "Machine Learning", "Mathematics", "Business Statistics", "Economics"],
+        "Web Development":            ["Computer Science", "Computer Applications", "Data Structures", "Database Management"],
+        "Cybersecurity":              ["Computer Science", "Computer Applications", "Cyber Security", "Operating Systems"],
+        "Cloud Computing":            ["Computer Science", "Computer Applications", "Cloud Computing", "Operating Systems"],
+        "DevOps":                     ["Computer Science", "Computer Applications", "Operating Systems", "Cloud Computing"],
+        "Blockchain":                 ["Computer Science", "Computer Applications", "Cyber Security", "Data Structures"],
+        "UI/UX":                      ["Computer Applications", "English", "Hindi"],
+        "Software Development":       ["Computer Science", "Computer Applications", "Data Structures", "Operating Systems", "Database Management"],
+        "Game Development":           ["Computer Science", "Computer Applications", "Mathematics", "Physics"],
+        "Mobile Development":         ["Computer Science", "Computer Applications", "Data Structures"],
+        "Networking":                 ["Computer Science", "Computer Applications", "Operating Systems"],
+        "IoT":                        ["Computer Science", "Computer Applications", "Physics", "Chemistry"],
+        "Embedded Systems":           ["Computer Science", "Computer Applications", "Physics", "Chemistry"],
+        "Robotics":                   ["Computer Science", "Computer Applications", "Physics", "Mathematics"],
+        "Finance":                    ["Accountancy", "Business Studies", "Economics", "Financial Accounting", "Corporate Finance", "Business Statistics", "Cost Accounting", "Auditing"],
+        "Marketing":                  ["Business Studies", "Marketing Management", "English"],
+        "Management":                 ["Business Studies", "Human Resource Management", "English"]
+    }
+
     # Reshape for prediction
     X_input = np.array([input_vector])
     
@@ -179,17 +202,36 @@ def predict():
     pred_label = model.predict(X_input)[0]
     probabilities = model.predict_proba(X_input)[0]
     
-    # 3. Apply interest-based probability boosting
+    # 3. Apply interest-based probability boosting scaled by corresponding marks
     if interests and len(interests) > 0:
         boosted = list(probabilities)
         for i, cls_name in enumerate(classes):
-            boost_count = 0
+            boost_factor = 0.0
             for interest in interests:
                 if interest in INTEREST_AFFINITY:
                     if cls_name in INTEREST_AFFINITY[interest]:
-                        boost_count += 1
-            if boost_count > 0:
-                boosted[i] += INTEREST_BOOST * boost_count
+                        current_boost = INTEREST_BOOST
+                        
+                        # Scale boost if student has grades in subjects relevant to this interest
+                        related_subjs = INTEREST_SUBJECTS.get(interest, [])
+                        scores = []
+                        for sub in related_subjs:
+                            val = marks.get(sub)
+                            if val is not None and val != "":
+                                try:
+                                    scores.append(float(val))
+                                except ValueError:
+                                    pass
+                        
+                        if scores:
+                            avg_score = sum(scores) / len(scores)
+                            multiplier = 0.5 + (avg_score / 100.0)
+                            current_boost *= multiplier
+                        
+                        boost_factor += current_boost
+            
+            if boost_factor > 0:
+                boosted[i] += boost_factor
         
         # Re-normalize so probabilities sum to 1
         total = sum(boosted)

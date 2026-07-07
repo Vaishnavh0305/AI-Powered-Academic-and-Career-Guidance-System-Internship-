@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import RouteTransition from '../components/RouteTransition';
 import GlassCard from '../components/GlassCard';
+import { jsPDF } from 'jspdf';
 
 const History = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,7 +56,84 @@ const History = () => {
   ];
 
   const handleDownload = (rec) => {
-    setToastOpen(true);
+    try {
+      const doc = new jsPDF();
+      
+      // Header Banner
+      doc.setFillColor(15, 23, 42); // Dark Blue (#0F172A)
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.text("ANTIGRAVITY ASSESSMENT LOGS", 15, 18);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text("Historical Academic & Career Guidance Prediction Record", 15, 28);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(79, 70, 229); // Indigo (#4F46E5)
+      doc.text("HISTORICAL LOG DETAILS", 15, 55);
+      
+      // Find row in history data
+      const matched = historyData.find(h => h.recommendation === rec) || {
+        date: new Date().toLocaleDateString(),
+        level: 'N/A',
+        recommendation: rec,
+        confidence: 90
+      };
+      
+      doc.setFillColor(243, 244, 246);
+      doc.rect(15, 60, 180, 50, 'F');
+      
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text("Assessment Parameter", 22, 70);
+      doc.text("Logged Value", 120, 70);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text("Prediction Date:", 22, 80);
+      doc.text(matched.date, 120, 80);
+      
+      doc.text("Education Level:", 22, 88);
+      doc.text(matched.level, 120, 88);
+      
+      doc.text("AI Recommendation:", 22, 96);
+      doc.setFont('helvetica', 'bold');
+      doc.text(matched.recommendation, 120, 96);
+      doc.setFont('helvetica', 'normal');
+      
+      doc.text("Confidence Score:", 22, 104);
+      doc.text(`${matched.confidence}%`, 120, 104);
+      
+      // Assessment Logged Summary Section
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(79, 70, 229);
+      doc.text("LOGGED ASSESSMENT SUMMARY", 15, 125);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      const summaryText = `This assessment log records that on ${matched.date}, the student profile representing education level ${matched.level} was evaluated. Based on our random forest model classifiers, the student was recommended to pursue a career/stream as a "${matched.recommendation}" with a model confidence score of ${matched.confidence}%.`;
+      const summaryLines = doc.splitTextToSize(summaryText, 180);
+      doc.text(summaryLines, 15, 133);
+      
+      // Footer text
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text("This is an AI-generated guidance historical log report. Under normal usage, results are suggestive.", 15, 280);
+      
+      doc.save(`guidance_historical_log_${matched.date}.pdf`);
+      setToastOpen(true);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      setToastOpen(true);
+    }
   };
 
   const filteredHistory = historyData.filter(

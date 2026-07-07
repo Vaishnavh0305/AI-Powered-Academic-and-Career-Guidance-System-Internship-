@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { saveGuidanceData, getMLPrediction } from '../services/api';
+import { jsPDF } from 'jspdf';
 import {
   Box,
   Typography,
@@ -79,9 +80,95 @@ const Prediction = () => {
       if (saved) savedSoft = JSON.parse(saved);
     } catch (e) {}
 
-    const getMark = (sub, def = 70) => savedMarks[sub] !== undefined ? Number(savedMarks[sub]) : def;
+    let savedInterests = [];
+    try {
+      const saved = localStorage.getItem('guidance_user_interests');
+      if (saved) savedInterests = JSON.parse(saved);
+    } catch (e) {}
+
+    const INTEREST_AFFINITY = {
+      "Artificial Intelligence":    ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "Machine Learning Engineer", "Data Scientist"],
+      "Machine Learning":           ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "B.Sc in Data Science", "Machine Learning Engineer", "Data Scientist"],
+      "Data Science":               ["Science Elective (PCM with Computer Science)", "B.Sc in Data Science", "Data Scientist", "Business Analyst", "Machine Learning Engineer"],
+      "Web Development":            ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "Diploma in Computer Engineering / IT", "Full Stack Engineer"],
+      "Cybersecurity":              ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "Cyber Security Analyst"],
+      "Cloud Computing":            ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "DevOps Cloud Engineer"],
+      "DevOps":                     ["Science Elective (PCM with Computer Science)", "Diploma in Computer Engineering / IT", "DevOps Cloud Engineer", "Full Stack Engineer"],
+      "Blockchain":                 ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "Full Stack Engineer", "Cyber Security Analyst"],
+      "UI/UX":                      ["Arts with Humanities", "Professional Diploma in Digital Marketing & Design", "Full Stack Engineer", "Product/Project Manager"],
+      "Software Development":       ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "Diploma in Computer Engineering / IT", "Full Stack Engineer", "DevOps Cloud Engineer"],
+      "Game Development":           ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "Full Stack Engineer"],
+      "Mobile Development":         ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "Diploma in Computer Engineering / IT", "Full Stack Engineer"],
+      "Networking":                 ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "DevOps Cloud Engineer", "Cyber Security Analyst"],
+      "IoT":                        ["Science Elective (PCM with Computer Science)", "Science with Biology (PCB)", "DevOps Cloud Engineer"],
+      "Embedded Systems":           ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "DevOps Cloud Engineer"],
+      "Robotics":                   ["Science Elective (PCM with Computer Science)", "B.Tech in Computer Science & Engineering (AI/ML)", "Machine Learning Engineer"],
+      "Finance":                    ["Commerce with Applied Math", "Chartered Accountancy (CA) / CS Program", "Bachelor of Commerce (B.Com Hons)", "Financial Analyst / Investment Banker", "Chartered Accountant (CA)", "Business Analyst"],
+      "Marketing":                  ["Commerce with Applied Math", "Professional Diploma in Digital Marketing & Design", "Diploma in Business Administration (DBA)", "Marketing Executive", "Management Consultant"],
+      "Management":                 ["Commerce with Applied Math", "Diploma in Business Administration (DBA)", "Product/Project Manager", "Management Consultant", "HR Specialist"],
+    };
+
+    const INTEREST_SUBJECTS = {
+      "Artificial Intelligence":    ["Computer Science", "Computer Applications", "Artificial Intelligence", "Machine Learning", "Mathematics"],
+      "Machine Learning":           ["Computer Science", "Computer Applications", "Machine Learning", "Artificial Intelligence", "Mathematics"],
+      "Data Science":               ["Computer Science", "Computer Applications", "Database Management", "Machine Learning", "Mathematics", "Business Statistics", "Economics"],
+      "Web Development":            ["Computer Science", "Computer Applications", "Data Structures", "Database Management"],
+      "Cybersecurity":              ["Computer Science", "Computer Applications", "Cyber Security", "Operating Systems"],
+      "Cloud Computing":            ["Computer Science", "Computer Applications", "Cloud Computing", "Operating Systems"],
+      "DevOps":                     ["Computer Science", "Computer Applications", "Operating Systems", "Cloud Computing"],
+      "Blockchain":                 ["Computer Science", "Computer Applications", "Cyber Security", "Data Structures"],
+      "UI/UX":                      ["Computer Applications", "English", "Hindi"],
+      "Software Development":       ["Computer Science", "Computer Applications", "Data Structures", "Operating Systems", "Database Management"],
+      "Game Development":           ["Computer Science", "Computer Applications", "Mathematics", "Physics"],
+      "Mobile Development":         ["Computer Science", "Computer Applications", "Data Structures"],
+      "Networking":                 ["Computer Science", "Computer Applications", "Operating Systems"],
+      "IoT":                        ["Computer Science", "Computer Applications", "Physics", "Chemistry"],
+      "Embedded Systems":           ["Computer Science", "Computer Applications", "Physics", "Chemistry"],
+      "Robotics":                   ["Computer Science", "Computer Applications", "Physics", "Mathematics"],
+      "Finance":                    ["Accountancy", "Business Studies", "Economics", "Financial Accounting", "Corporate Finance", "Business Statistics", "Cost Accounting", "Auditing"],
+      "Marketing":                  ["Business Studies", "Marketing Management", "English"],
+      "Management":                 ["Business Studies", "Human Resource Management", "English"],
+    };
+
+    const getMark = (sub, def = 70) => {
+      const level = mode === 'stream' ? 'Class 10' : (mode === 'course' ? 'Class 12' : (savedAcademics.currentEducation || 'Undergraduate'));
+      if (savedMarks[level] && savedMarks[level][sub] !== undefined) {
+        return Number(savedMarks[level][sub]);
+      }
+      if (savedMarks[sub] !== undefined && typeof savedMarks[sub] !== 'object') {
+        return Number(savedMarks[sub]);
+      }
+      return def;
+    };
+
     const getProg = (skill, def = 50) => savedProg[skill] !== undefined ? Number(savedProg[skill]) : def;
     const getSoft = (skill, def = 50) => savedSoft[skill] !== undefined ? Number(savedSoft[skill]) : def;
+
+    const getInterestBoost = (optionName) => {
+      let totalBoost = 0;
+      savedInterests.forEach(interest => {
+        const affinityList = INTEREST_AFFINITY[interest] || [];
+        if (affinityList.includes(optionName)) {
+          let boost = 10;
+          const relatedSubjs = INTEREST_SUBJECTS[interest] || [];
+          let sumMarks = 0;
+          let countMarks = 0;
+          relatedSubjs.forEach(sub => {
+            const mark = getMark(sub, -1);
+            if (mark !== -1) {
+              sumMarks += mark;
+              countMarks++;
+            }
+          });
+          if (countMarks > 0) {
+            const avgMark = sumMarks / countMarks;
+            boost = boost * (0.5 + (avgMark / 100));
+          }
+          totalBoost += boost;
+        }
+      });
+      return totalBoost;
+    };
 
     switch (mode) {
       case 'stream': {
@@ -97,10 +184,14 @@ const Prediction = () => {
           { name: 'Arts with Humanities', value: Math.round(arts || 50), color: '#3B82F6' },
         ];
 
+        options.forEach(opt => {
+          opt.value = Math.min(99, opt.value + getInterestBoost(opt.name));
+        });
+
         options.sort((a, b) => b.value - a.value);
         const primary = options[0];
         const alternatives = options.slice(1);
-        const confidenceVal = Math.min(99, Math.max(70, Math.round(primary.value)));
+        const confidenceVal = Math.min(99, Math.max(30, Math.round(primary.value)));
 
         const topSubject = getMark('Mathematics', 75) >= getMark('Science', 75) ? 'Mathematics' : 'Science';
         const topScore = Math.max(getMark('Mathematics', 75), getMark('Science', 75));
@@ -123,30 +214,69 @@ const Prediction = () => {
         };
       }
       case 'course': {
-        const cseMl = getMark('Computer Science', 70) * 0.4 + getMark('Mathematics', 75) * 0.4 + getMark('Physics', 75) * 0.2;
-        const dataSci = getMark('Mathematics', 75) * 0.5 + getMark('Computer Science', 70) * 0.3 + getMark('Economics', 70) * 0.2;
-        const electronics = getMark('Physics', 75) * 0.4 + getMark('Mathematics', 75) * 0.4 + getMark('Computer Science', 70) * 0.2;
-        const bio = getMark('Biology', 70) * 0.5 + getMark('Chemistry', 70) * 0.3 + getMark('Physics', 75) * 0.2;
-        const commerce = getMark('Accountancy', 70) * 0.4 + getMark('Business Studies', 70) * 0.3 + getMark('Economics', 70) * 0.3;
-        const humanities = getMark('English', 75) * 0.5 + getMark('Hindi', 70) * 0.3 + getMark('Economics', 70) * 0.2;
+        const math = getMark('Mathematics', 75);
+        const phys = getMark('Physics', 75);
+        const chem = getMark('Chemistry', 75);
+        const eng = getMark('English', 70);
+        const cs = getMark('Computer Science', 70);
+        const bio = getMark('Biology', 70);
+        const acc = getMark('Accountancy', 70);
+        const bs = getMark('Business Studies', 70);
+        const econ = getMark('Economics', 70);
+        const hin = getMark('Hindi', 70);
+
+        const cseMl = cs * 0.4 + math * 0.4 + phys * 0.2;
+        const dataSci = math * 0.5 + cs * 0.3 + econ * 0.2;
+        const dipIt = cs * 0.5 + math * 0.3 + phys * 0.2 + (Math.max(math, phys, cs) < 75 ? 12 : 0);
+        const mbbs = bio * 0.5 + chem * 0.3 + phys * 0.2;
+        const dipPharm = bio * 0.6 + chem * 0.4 + (Math.max(bio, chem, phys) < 75 ? 12 : 0);
+        const ca = acc * 0.5 + bs * 0.3 + econ * 0.2 + (Math.min(acc, bs) > 85 ? 18 : 0);
+        const commerce = acc * 0.4 + bs * 0.3 + econ * 0.3;
+        const dipBus = bs * 0.5 + econ * 0.3 + eng * 0.2 + (Math.max(acc, bs, econ) < 70 ? 12 : 0);
+        const humanities = eng * 0.5 + hin * 0.3 + econ * 0.2;
+        const dipMkt = eng * 0.4 + cs * 0.3 + econ * 0.3 + (Math.max(eng, cs) < 75 ? 12 : 0);
 
         const options = [
           { name: 'B.Tech in Computer Science & Engineering (AI/ML)', value: Math.round(cseMl || 75), color: '#6366F1' },
           { name: 'B.Sc in Data Science', value: Math.round(dataSci || 70), color: '#10B981' },
-          { name: 'B.Tech in Electronics & Comm.', value: Math.round(electronics || 65), color: '#818CF8' },
-          { name: 'Bachelor of Medicine / BDS (MBBS)', value: Math.round(bio || 50), color: '#EC4899' },
-          { name: 'Bachelor of Commerce (B.Com Hons)', value: Math.round(commerce || 55), color: '#F59E0B' },
-          { name: 'Bachelor of Arts (Humanities)', value: Math.round(humanities || 45), color: '#3B82F6' },
+          { name: 'Diploma in Computer Engineering / IT', value: Math.round(dipIt || 65), color: '#818CF8' },
+          { name: 'Bachelor of Medicine / BDS (MBBS)', value: Math.round(mbbs || 50), color: '#EC4899' },
+          { name: 'Diploma in General Nursing & Pharmacy', value: Math.round(dipPharm || 55), color: '#F59E0B' },
+          { name: 'Chartered Accountancy (CA) / CS Program', value: Math.round(ca || 60), color: '#3B82F6' },
+          { name: 'Bachelor of Commerce (B.Com Hons)', value: Math.round(commerce || 60), color: '#10B981' },
+          { name: 'Diploma in Business Administration (DBA)', value: Math.round(dipBus || 55), color: '#818CF8' },
+          { name: 'Bachelor of Arts (Humanities)', value: Math.round(humanities || 45), color: '#EC4899' },
+          { name: 'Professional Diploma in Digital Marketing & Design', value: Math.round(dipMkt || 50), color: '#F59E0B' },
         ];
+
+        options.forEach(opt => {
+          opt.value = Math.min(99, opt.value + getInterestBoost(opt.name));
+        });
 
         options.sort((a, b) => b.value - a.value);
         const primary = options[0];
         const alternatives = options.slice(1, 4);
-        const confidenceVal = Math.min(99, Math.max(70, Math.round(primary.value)));
+        const confidenceVal = Math.min(99, Math.max(30, Math.round(primary.value)));
 
-        const topSubject = getMark('Mathematics', 75) >= getMark('Computer Science', 70) ? 'Mathematics' : 'Computer Science';
-        const topScore = Math.max(getMark('Mathematics', 75), getMark('Computer Science', 70));
-        const descText = `Recommended based on your subject performance in ${topSubject} (${topScore}%) and Physics (${getMark('Physics', 75)}%). This fits students showing high logical, computational, and technical aptitude.`;
+        const subj_list = [
+          ["Mathematics", math],
+          ["Physics", phys],
+          ["Chemistry", chem],
+          ["English", eng],
+          ["Computer Science", cs],
+          ["Biology", bio],
+          ["Accountancy", acc],
+          ["Business Studies", bs],
+          ["Economics", econ],
+          ["Hindi", hin]
+        ];
+        const sorted_subjs = subj_list.sort((a, b) => b[1] - a[1]);
+        const top1_name = sorted_subjs[0][0];
+        const top1_val = sorted_subjs[0][1];
+        const top2_name = sorted_subjs[1][0];
+        const top2_val = sorted_subjs[1][1];
+
+        const descText = `Recommended post-12th course/professional path. The model identified high correlation in your scores for ${top1_name} (${top1_val}%) and ${top2_name} (${top2_val}%), aligning with optimal candidate profiles for ${primary.name}.`;
 
         return {
           title: 'Undergraduate Course Recommendation',
@@ -156,11 +286,11 @@ const Prediction = () => {
           desc: descText,
           alternatives: alternatives,
           radar: [
-            { subject: 'Math & Stats', value: getMark('Mathematics', 75), fullMark: 100 },
-            { subject: 'Computer Fundamentals', value: getMark('Computer Science', 70), fullMark: 100 },
-            { subject: 'Physics Core', value: getMark('Physics', 75), fullMark: 100 },
-            { subject: 'Logical Deductions', value: Math.round((getMark('Mathematics', 75) + getMark('Computer Science', 70)) / 2), fullMark: 100 },
-            { subject: 'Communication', value: getMark('English', 75), fullMark: 100 },
+            { subject: 'Math & Stats', value: math, fullMark: 100 },
+            { subject: 'Computer Fundamentals', value: cs, fullMark: 100 },
+            { subject: 'Physics Core', value: phys, fullMark: 100 },
+            { subject: 'Logical Deductions', value: Math.round((math + cs) / 2), fullMark: 100 },
+            { subject: 'Communication', value: eng, fullMark: 100 },
           ]
         };
       }
@@ -174,28 +304,87 @@ const Prediction = () => {
         const cloudMark = getMark('Cloud Computing', 70);
         const cyberMark = getMark('Cyber Security', 70);
 
-        const mle = (getProg('Python', 50) * 0.3) + (getSoft('Problem Solving', 50) * 0.3) + (mlMark * 0.2) + (aiMark * 0.2);
-        const ds = (getProg('Python', 50) * 0.3) + (getProg('SQL', 50) * 0.3) + (dbMark * 0.2) + (getSoft('Problem Solving', 50) * 0.2);
-        const fs = (getProg('JavaScript', 50) * 0.4) + (getProg('SQL', 50) * 0.2) + (dsMark * 0.2) + (getSoft('Problem Solving', 50) * 0.2);
-        const devops = (cloudMark * 0.3) + (osMark * 0.3) + (getProg('Java', 50) * 0.2) + (getSoft('Team Work', 50) * 0.2);
-        const cyber = (cyberMark * 0.4) + (getSoft('Critical Thinking', 50) * 0.3) + (osMark * 0.3);
-        const pm = (getSoft('Leadership', 50) * 0.4) + (getSoft('Communication', 50) * 0.3) + (getSoft('Team Work', 50) * 0.3);
+        const fin_acc = getMark('Financial Accounting', 70);
+        const cost_acc = getMark('Cost Accounting', 70);
+        const audit = getMark('Auditing', 70);
+        const corp_fin = getMark('Corporate Finance', 70);
+        const bus_stat = getMark('Business Statistics', 70);
+        const macro_econ = getMark('Macroeconomics', 70);
+        const mkt_mgmt = getMark('Marketing Management', 70);
+        const hr_mgmt = getMark('Human Resource Management', 70);
 
-        const options = [
-          { name: 'Machine Learning Engineer', value: Math.round(mle || 75), color: '#6366F1' },
-          { name: 'Data Scientist', value: Math.round(ds || 70), color: '#10B981' },
-          { name: 'Full Stack Engineer', value: Math.round(fs || 65), color: '#818CF8' },
-          { name: 'DevOps Cloud Engineer', value: Math.round(devops || 60), color: '#EC4899' },
-          { name: 'Cyber Security Analyst', value: Math.round(cyber || 55), color: '#F59E0B' },
-          { name: 'Product/Project Manager', value: Math.round(pm || 50), color: '#3B82F6' },
-        ];
+        let options = [];
+        if (savedAcademics.currentEducation === 'Undergraduate (Commerce)') {
+          const ib = corp_fin * 0.4 + fin_acc * 0.3 + bus_stat * 0.3;
+          const ca = fin_acc * 0.4 + cost_acc * 0.3 + audit * 0.3;
+          const consult = getSoft('Problem Solving', 50) * 0.3 + getSoft('Leadership', 50) * 0.3 + macro_econ * 0.2 + getSoft('Communication', 50) * 0.2;
+          const mkt = mkt_mgmt * 0.5 + getSoft('Communication', 50) * 0.3 + getSoft('Leadership', 50) * 0.2;
+          const hr = hr_mgmt * 0.5 + getSoft('Communication', 50) * 0.3 + getSoft('Team Work', 50) * 0.2;
+          const ba = bus_stat * 0.4 + getProg('SQL', 50) * 0.3 + macro_econ * 0.3;
+
+          options = [
+            { name: 'Financial Analyst / Investment Banker', value: Math.round(ib || 75), color: '#6366F1' },
+            { name: 'Chartered Accountant (CA)', value: Math.round(ca || 70), color: '#10B981' },
+            { name: 'Management Consultant', value: Math.round(consult || 65), color: '#818CF8' },
+            { name: 'Marketing Executive', value: Math.round(mkt || 60), color: '#EC4899' },
+            { name: 'HR Specialist', value: Math.round(hr || 55), color: '#F59E0B' },
+            { name: 'Business Analyst', value: Math.round(ba || 50), color: '#3B82F6' },
+          ];
+        } else {
+          const mle = (getProg('Python', 50) * 0.3) + (getSoft('Problem Solving', 50) * 0.3) + (mlMark * 0.2) + (aiMark * 0.2);
+          const ds = (getProg('Python', 50) * 0.3) + (getProg('SQL', 50) * 0.3) + (dbMark * 0.2) + (getSoft('Problem Solving', 50) * 0.2);
+          const fs = (getProg('JavaScript', 50) * 0.4) + (getProg('SQL', 50) * 0.2) + (dsMark * 0.2) + (getSoft('Problem Solving', 50) * 0.2);
+          const devops = (cloudMark * 0.3) + (osMark * 0.3) + (getProg('Java', 50) * 0.2) + (getSoft('Team Work', 50) * 0.2);
+          const cyber = (cyberMark * 0.4) + (getSoft('Critical Thinking', 50) * 0.3) + (osMark * 0.3);
+          const pm = (getSoft('Leadership', 50) * 0.4) + (getSoft('Communication', 50) * 0.3) + (getSoft('Team Work', 50) * 0.3);
+
+          options = [
+            { name: 'Machine Learning Engineer', value: Math.round(mle || 75), color: '#6366F1' },
+            { name: 'Data Scientist', value: Math.round(ds || 70), color: '#10B981' },
+            { name: 'Full Stack Engineer', value: Math.round(fs || 65), color: '#818CF8' },
+            { name: 'DevOps Cloud Engineer', value: Math.round(devops || 60), color: '#EC4899' },
+            { name: 'Cyber Security Analyst', value: Math.round(cyber || 55), color: '#F59E0B' },
+            { name: 'Product/Project Manager', value: Math.round(pm || 50), color: '#3B82F6' },
+          ];
+        }
+
+        options.forEach(opt => {
+          opt.value = Math.min(99, opt.value + getInterestBoost(opt.name));
+        });
 
         options.sort((a, b) => b.value - a.value);
         const primary = options[0];
         const alternatives = options.slice(1, 4);
-        const confidenceVal = Math.min(99, Math.max(70, Math.round(primary.value)));
+        const confidenceVal = Math.min(99, Math.max(30, Math.round(primary.value)));
 
-        const descText = `Identified as the highest-matching career. Backed by solid technical foundation including Programming (${Math.round((getProg('Python') + getProg('Java') + getProg('C++') + getProg('JavaScript')) / 4)}%), Problem Solving (${getSoft('Problem Solving')}%), and academic specialization scores.`;
+        let descText = "";
+        let radar = [];
+
+        if (savedAcademics.currentEducation === 'Undergraduate (Commerce)') {
+          descText = `Identified as your highest-matching career path. Backed by solid qualitative and numerical foundations including Business Statistics (${int_val(bus_stat)}%), Problem Solving (${getSoft('Problem Solving')}%), and university commerce course scores.`;
+          
+          radar = [
+            { subject: "Finance & Accounting", value: Math.round((fin_acc + corp_fin) / 2), fullMark: 100 },
+            { subject: "Legal & Corporate", value: getMark('Corporate Laws', 70), fullMark: 100 },
+            { subject: "Aptitude & Stats", value: bus_stat, fullMark: 100 },
+            { subject: "Soft Skills", value: Math.round((getSoft('Communication') + getSoft('Leadership') + getSoft('Team Work')) / 3), fullMark: 100 },
+            { subject: "Economics & Audit", value: Math.round((macro_econ + audit) / 2), fullMark: 100 }
+          ];
+        } else {
+          const avg_prog = (getProg('Python') + getProg('Java') + getProg('C++') + getProg('JavaScript')) / 4;
+          descText = `Identified as the highest-matching career path. Backed by solid technical foundation including Programming (${Math.round(avg_prog)}%), Problem Solving (${getSoft('Problem Solving')}%), and university specialization course scores.`;
+          
+          radar = [
+            { subject: 'Algorithms & Dev', value: Math.round((getProg('Python') + getProg('Java') + getProg('JavaScript')) / 3), fullMark: 100 },
+            { subject: 'Applied Systems', value: Math.round((osMark + dbMark) / 2), fullMark: 100 },
+            { subject: 'Soft Skills', value: Math.round((getSoft('Communication') + getSoft('Leadership') + getSoft('Team Work')) / 3), fullMark: 100 },
+            { subject: 'Databases (SQL)', value: getProg('SQL'), fullMark: 100 },
+            { subject: 'Specialization', value: Math.max(mlMark, aiMark, cloudMark, cyberMark), fullMark: 100 }
+          ];
+        }
+
+        // helper helper inside rules
+        function int_val(v) { return Math.round(Number(v) || 0); }
 
         return {
           title: 'Post-College Career Path Prediction',
@@ -204,13 +393,7 @@ const Prediction = () => {
           confidence: `${confidenceVal}%`,
           desc: descText,
           alternatives: alternatives,
-          radar: [
-            { subject: 'Algorithms & Dev', value: Math.round((getProg('Python') + getProg('Java') + getProg('JavaScript')) / 3), fullMark: 100 },
-            { subject: 'Applied Systems', value: Math.round((osMark + dbMark) / 2), fullMark: 100 },
-            { subject: 'Soft Skills', value: Math.round((getSoft('Communication') + getSoft('Leadership') + getSoft('Team Work')) / 3), fullMark: 100 },
-            { subject: 'Databases (SQL)', value: getProg('SQL'), fullMark: 100 },
-            { subject: 'Specialization', value: Math.max(mlMark, aiMark, cloudMark, cyberMark), fullMark: 100 },
-          ]
+          radar: radar
         };
       }
     }
@@ -285,18 +468,24 @@ const Prediction = () => {
 
     const currentEd = academicsObj.currentEducation || "";
 
-    // Extract flat marks for the current education level from nested structure
-    let flatMarks = savedMarks;
-    if (savedMarks && savedMarks[currentEd]) {
-      // Nested format: marks are keyed by education level
-      flatMarks = savedMarks[currentEd];
-    } else if (savedMarks) {
-      // Check if first key is a level name (nested), and pick appropriate one
-      const firstKey = Object.keys(savedMarks)[0];
-      const knownLevels = ['Class 10', 'Class 12', 'Undergraduate', 'Undergraduate (Commerce)', 'Graduate'];
-      if (firstKey && knownLevels.includes(firstKey)) {
-        flatMarks = savedMarks[currentEd] || {};
+    // Map active prediction mode to the target education level's marks
+    let targetLevel = currentEd;
+    if (mode === 'stream') {
+      targetLevel = 'Class 10';
+    } else if (mode === 'course') {
+      targetLevel = 'Class 12';
+    } else if (mode === 'career') {
+      if (currentEd !== 'Undergraduate' && currentEd !== 'Undergraduate (Commerce)' && currentEd !== 'Graduate') {
+        targetLevel = 'Undergraduate';
       }
+    }
+
+    let flatMarks = {};
+    if (savedMarks && savedMarks[targetLevel]) {
+      flatMarks = savedMarks[targetLevel];
+    } else if (savedMarks) {
+      // Legacy or fallback
+      flatMarks = savedMarks[currentEd] || {};
     }
 
     let savedInterests = [];
@@ -307,7 +496,7 @@ const Prediction = () => {
 
     const payload = {
       mode,
-      currentEducation: currentEd,
+      currentEducation: targetLevel,
       marks: flatMarks,
       programmingSkills: savedProg,
       softSkills: savedSoft,
@@ -328,7 +517,121 @@ const Prediction = () => {
   };
 
   const handleDownload = () => {
-    setToastOpen(true);
+    try {
+      const doc = new jsPDF();
+      
+      // Header Banner
+      doc.setFillColor(15, 23, 42); // Dark Blue (#0F172A)
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.text("ANTIGRAVITY GUIDANCE SYSTEM", 15, 18);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text("AI-Powered Academic & Career Guidance Assessment Report", 15, 28);
+      
+      doc.setTextColor(200, 200, 255);
+      doc.setFontSize(9);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 155, 28);
+      
+      // Optimal Path Section
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(79, 70, 229); // Indigo (#4F46E5)
+      doc.text("AI OPTIMAL PATH RECOMMENDATION", 15, 55);
+      
+      doc.setFillColor(243, 244, 246);
+      doc.rect(15, 60, 180, 25, 'F');
+      
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(15);
+      doc.setFont('helvetica', 'bold');
+      doc.text(currentData.predictionName, 22, 71);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Forecast Confidence Score: ${currentData.confidence}`, 22, 79);
+      
+      // Analysis / Description Section
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(79, 70, 229);
+      doc.text("ASSESSMENT ANALYSIS", 15, 100);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      const descLines = doc.splitTextToSize(currentData.desc, 180);
+      doc.text(descLines, 15, 108);
+      
+      let yOffset = 108 + (descLines.length * 5) + 12;
+      
+      // Alternatives Section
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(79, 70, 229);
+      doc.text("ALTERNATIVE MATCHING PATHS", 15, yOffset);
+      
+      yOffset += 8;
+      currentData.alternatives.forEach((alt, idx) => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42);
+        doc.text(`${idx + 1}. ${alt.name}`, 15, yOffset);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(71, 85, 105);
+        doc.text(`(Confidence: ${alt.value}%)`, 140, yOffset);
+        yOffset += 6;
+      });
+      
+      // Capability / Grades Section
+      yOffset += 10;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(79, 70, 229);
+      doc.text("ACADEMIC SCORES SUMMARY", 15, yOffset);
+      
+      yOffset += 8;
+      // Draw Table Header
+      doc.setFillColor(15, 23, 42);
+      doc.rect(15, yOffset, 180, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text("Subject / Evaluated Parameter", 20, yOffset + 5.5);
+      doc.text("Score / Value", 150, yOffset + 5.5);
+      
+      yOffset += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(15, 23, 42);
+      
+      const radarData = currentData.radar || [];
+      radarData.forEach((m, idx) => {
+        if (idx % 2 === 0) {
+          doc.setFillColor(249, 250, 251);
+          doc.rect(15, yOffset, 180, 7, 'F');
+        }
+        doc.text(m.subject, 20, yOffset + 5);
+        doc.text(`${m.value} / 100`, 150, yOffset + 5);
+        yOffset += 7;
+      });
+      
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text("This is an AI-generated guidance assessment report. Under normal usage, results are suggestive.", 15, 285);
+      
+      doc.save(`guidance_report_${mode}_${Date.now()}.pdf`);
+      setToastOpen(true);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      setToastOpen(true);
+    }
   };
 
   return (

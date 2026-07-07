@@ -37,13 +37,61 @@ const getAcademicsState = () => {
 };
 
 // Fetch data from MongoDB (with localStorage fallback)
-export const getGuidanceData = async () => {
+const getUserEmail = () => {
   try {
-    const res = await fetch(API_URL);
+    const profile = JSON.parse(localStorage.getItem('guidance_user_profile') || '{}');
+    return profile.email || 'default_student';
+  } catch (e) {
+    return 'default_student';
+  }
+};
+
+// Register new user with backend MongoDB database
+export const registerUser = async (user) => {
+  try {
+    const res = await fetch('http://localhost:5001/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user)
+    });
+    return await res.json();
+  } catch (error) {
+    return { error: 'Failed to connect to backend auth server' };
+  }
+};
+
+// Authenticate user with backend MongoDB database
+export const loginUser = async (credentials) => {
+  try {
+    const res = await fetch('http://localhost:5001/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials)
+    });
+    return await res.json();
+  } catch (error) {
+    return { error: 'Failed to connect to backend auth server' };
+  }
+};
+
+// Fetch data from MongoDB (with localStorage fallback)
+export const getGuidanceData = async () => {
+  const email = getUserEmail();
+  try {
+    const res = await fetch(`${API_URL}?email=${encodeURIComponent(email)}`);
     if (res.ok) {
       const data = await res.json();
       // Synchronize localStorage with MongoDB data
-      if (data.personalInfo) localStorage.setItem('guidance_user_profile', JSON.stringify(data.personalInfo));
+      if (data.personalInfo) {
+        const localProfile = JSON.parse(localStorage.getItem('guidance_user_profile') || '{}');
+        const mergedProfile = {
+          ...localProfile,
+          ...data.personalInfo,
+          email: data.personalInfo.email || localProfile.email || '',
+          name: data.personalInfo.name || localProfile.name || ''
+        };
+        localStorage.setItem('guidance_user_profile', JSON.stringify(mergedProfile));
+      }
       if (data.academics) {
         localStorage.setItem('guidance_user_academics', JSON.stringify(data.academics));
         
@@ -81,7 +129,14 @@ export const getGuidanceData = async () => {
 export const saveGuidanceData = async (updatedFields) => {
   // First, always update local storage for instant responsiveness
   if (updatedFields.personalInfo) {
-    localStorage.setItem('guidance_user_profile', JSON.stringify(updatedFields.personalInfo));
+    const localProfile = JSON.parse(localStorage.getItem('guidance_user_profile') || '{}');
+    const mergedProfile = {
+      ...localProfile,
+      ...updatedFields.personalInfo,
+      email: updatedFields.personalInfo.email || localProfile.email || '',
+      name: updatedFields.personalInfo.name || localProfile.name || ''
+    };
+    localStorage.setItem('guidance_user_profile', JSON.stringify(mergedProfile));
   }
   if (updatedFields.academics) {
     // Write full academics details to guidance_user_academics
@@ -114,8 +169,10 @@ export const saveGuidanceData = async (updatedFields) => {
     localStorage.setItem('guidance_user_prediction', updatedFields.prediction);
   }
 
+  const email = getUserEmail();
   // Next, gather full state to send to backend
   const fullPayload = {
+    userId: email,
     personalInfo: JSON.parse(localStorage.getItem('guidance_user_profile') || '{}'),
     academics: getAcademicsState(),
     programmingSkills: JSON.parse(localStorage.getItem('guidance_user_programming_skills') || '{}'),
@@ -132,7 +189,7 @@ export const saveGuidanceData = async (updatedFields) => {
   };
 
   try {
-    const res = await fetch(API_URL, {
+    const res = await fetch(`${API_URL}?email=${encodeURIComponent(email)}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

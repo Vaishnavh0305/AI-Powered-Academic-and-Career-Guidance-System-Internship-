@@ -17,6 +17,7 @@ import {
   AutoAwesome as AIIcon,
 } from '@mui/icons-material';
 import RouteTransition from '../components/RouteTransition';
+import { registerUser } from '../services/api';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -37,8 +38,26 @@ const Register = () => {
       alert('Passwords do not match.');
       return;
     }
-    // Simulate successful registration and redirect to dashboard
-    navigate('/dashboard');
+
+    registerUser({ name, email, password, educationLevel })
+      .then((res) => {
+        if (res && res.error) {
+          alert(res.error);
+        } else {
+          alert('Registration successful! Please sign in with your credentials.');
+          navigate('/login');
+        }
+      })
+      .catch(() => {
+        alert('Registration error. Running in local fallback mode.');
+        const profile = {
+          email: email,
+          name: name,
+          isAdmin: email.toLowerCase().includes('admin')
+        };
+        localStorage.setItem('guidance_user_profile', JSON.stringify(profile));
+        navigate('/dashboard');
+      });
   };
 
   const eduLevels = [

@@ -20,6 +20,7 @@ import {
   AutoAwesome as AIIcon,
 } from '@mui/icons-material';
 import RouteTransition from '../components/RouteTransition';
+import { loginUser, registerUser } from '../services/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -29,29 +30,95 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const existing = JSON.parse(localStorage.getItem('guidance_user_profile') || '{}');
-    const updated = {
-      ...existing,
-      email: email || 'student@antigravity.edu',
-      name: existing.name || (email ? email.split('@')[0] : 'Jane Doe'),
-      isAdmin: (email && email.toLowerCase().includes('admin')) ? true : false
-    };
-    localStorage.setItem('guidance_user_profile', JSON.stringify(updated));
-    navigate('/dashboard');
+    if (!email || !password) {
+      alert('Please enter both email and password.');
+      return;
+    }
+
+    loginUser({ email, password })
+      .then((res) => {
+        if (res && res.error) {
+          alert(res.error);
+        } else {
+          const profile = {
+            email: email,
+            name: res.user?.name || email.split('@')[0],
+            isAdmin: email.toLowerCase().includes('admin')
+          };
+
+          // Clear local storage assessments of previous user so new user retrieves fresh data
+          const keysToClear = [
+            'guidance_user_profile', 'guidance_user_academics', 'guidance_academic_marks',
+            'guidance_academic_attendance', 'guidance_academic_study_hours',
+            'guidance_academic_fav_subject', 'guidance_academic_achievements',
+            'guidance_user_programming_skills', 'guidance_user_soft_skills',
+            'guidance_user_interests', 'guidance_user_certs', 'guidance_user_prediction'
+          ];
+          keysToClear.forEach(k => localStorage.removeItem(k));
+
+          localStorage.setItem('guidance_user_profile', JSON.stringify(profile));
+          navigate('/dashboard');
+        }
+      })
+      .catch(() => {
+        alert('Authentication error. Running in local fallback mode.');
+        const profile = {
+          email: email,
+          name: email.split('@')[0],
+          isAdmin: email.toLowerCase().includes('admin')
+        };
+        localStorage.setItem('guidance_user_profile', JSON.stringify(profile));
+        navigate('/dashboard');
+      });
   };
 
   const handleGoogleLogin = (isAdminUser) => {
-    const email = isAdminUser ? 'admin@antigravity.edu' : 'student@antigravity.edu';
-    const name = isAdminUser ? 'Admin Portal Manager' : 'Jane Doe';
-    const existing = JSON.parse(localStorage.getItem('guidance_user_profile') || '{}');
-    const updated = {
-      ...existing,
-      email: email,
-      name: name,
-      isAdmin: isAdminUser
-    };
-    localStorage.setItem('guidance_user_profile', JSON.stringify(updated));
-    navigate('/dashboard');
+    const demoEmail = isAdminUser ? 'admin@antigravity.edu' : 'student@antigravity.edu';
+    const demoName = isAdminUser ? 'Admin Portal Manager' : 'Jane Doe';
+    const demoPass = 'password123';
+
+    loginUser({ email: demoEmail, password: demoPass })
+      .then((res) => {
+        if (res && res.error) {
+          // Self-initialize demo account if not exists
+          registerUser({
+            name: demoName,
+            email: demoEmail,
+            password: demoPass,
+            educationLevel: isAdminUser ? 'Graduate' : 'Undergraduate'
+          }).then(() => {
+            loginUser({ email: demoEmail, password: demoPass }).then(finalRes => {
+              if (finalRes && !finalRes.error) {
+                const profile = {
+                  email: demoEmail,
+                  name: demoName,
+                  isAdmin: isAdminUser
+                };
+                localStorage.setItem('guidance_user_profile', JSON.stringify(profile));
+                navigate('/dashboard');
+              }
+            });
+          });
+        } else {
+          const profile = {
+            email: demoEmail,
+            name: demoName,
+            isAdmin: isAdminUser
+          };
+          localStorage.setItem('guidance_user_profile', JSON.stringify(profile));
+          navigate('/dashboard');
+        }
+      })
+      .catch(() => {
+        // Fallback
+        const profile = {
+          email: demoEmail,
+          name: demoName,
+          isAdmin: isAdminUser
+        };
+        localStorage.setItem('guidance_user_profile', JSON.stringify(profile));
+        navigate('/dashboard');
+      });
   };
 
   return (

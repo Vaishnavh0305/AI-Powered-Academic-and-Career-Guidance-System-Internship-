@@ -61,10 +61,20 @@ mongoose.connect(MONGO_URI)
 // API Routes
 app.get('/api/guidance', async (req, res) => {
   try {
-    let data = await UserData.findOne({ userId: 'default_student' });
+    const email = req.query.email || 'default_student';
+    let data = await UserData.findOne({ userId: email });
     if (!data) {
-      // Create default empty profile if none exists
-      data = await UserData.create({ userId: 'default_student' });
+      // Find the user details from the registered User collection
+      const user = await User.findOne({ email });
+      const personalInfo = {
+        name: user ? user.name : '',
+        email: email !== 'default_student' ? email : '',
+        phone: '',
+        dob: '',
+        address: ''
+      };
+      // Create profile with registered user details
+      data = await UserData.create({ userId: email, personalInfo });
     }
     res.json(data);
   } catch (error) {
@@ -74,9 +84,10 @@ app.get('/api/guidance', async (req, res) => {
 
 app.post('/api/guidance', async (req, res) => {
   try {
+    const email = req.query.email || req.body.userId || 'default_student';
     const { personalInfo, academics, programmingSkills, softSkills, certs, prediction } = req.body;
     const updatedData = await UserData.findOneAndUpdate(
-      { userId: 'default_student' },
+      { userId: email },
       {
         personalInfo,
         academics,
