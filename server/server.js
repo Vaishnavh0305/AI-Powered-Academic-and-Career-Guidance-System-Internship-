@@ -39,6 +39,9 @@ const UserDataSchema = new mongoose.Schema({
   softSkills: { type: Map, of: Number, default: {} },
   interests: { type: Array, default: [] },
   certs: { type: Array, default: [] },
+  projects: { type: Array, default: [] },
+  internships: { type: Array, default: [] },
+  hackathons: { type: Array, default: [] },
   prediction: { type: String, default: 'None' },
 }, { timestamps: true });
 
@@ -85,7 +88,7 @@ app.get('/api/guidance', async (req, res) => {
 app.post('/api/guidance', async (req, res) => {
   try {
     const email = req.query.email || req.body.userId || 'default_student';
-    const { personalInfo, academics, programmingSkills, softSkills, certs, prediction } = req.body;
+    const { personalInfo, academics, programmingSkills, softSkills, certs, prediction, projects, internships, hackathons } = req.body;
     const updatedData = await UserData.findOneAndUpdate(
       { userId: email },
       {
@@ -94,7 +97,10 @@ app.post('/api/guidance', async (req, res) => {
         programmingSkills,
         softSkills,
         certs,
-        prediction
+        prediction,
+        projects,
+        internships,
+        hackathons
       },
       { new: true, upsert: true }
     );

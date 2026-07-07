@@ -106,6 +106,9 @@ export const getGuidanceData = async () => {
       if (data.softSkills) localStorage.setItem('guidance_user_soft_skills', JSON.stringify(data.softSkills));
       if (data.interests) localStorage.setItem('guidance_user_interests', JSON.stringify(data.interests));
       if (data.certs) localStorage.setItem('guidance_user_certs', JSON.stringify(data.certs));
+      if (data.projects) localStorage.setItem('guidance_user_projects', JSON.stringify(data.projects));
+      if (data.internships) localStorage.setItem('guidance_user_internships', JSON.stringify(data.internships));
+      if (data.hackathons) localStorage.setItem('guidance_user_hackathons', JSON.stringify(data.hackathons));
       if (data.prediction) localStorage.setItem('guidance_user_prediction', data.prediction);
       return data;
     }
@@ -121,6 +124,9 @@ export const getGuidanceData = async () => {
     softSkills: JSON.parse(localStorage.getItem('guidance_user_soft_skills') || '{}'),
     interests: JSON.parse(localStorage.getItem('guidance_user_interests') || '[]'),
     certs: JSON.parse(localStorage.getItem('guidance_user_certs') || '[]'),
+    projects: JSON.parse(localStorage.getItem('guidance_user_projects') || '[]'),
+    internships: JSON.parse(localStorage.getItem('guidance_user_internships') || '[]'),
+    hackathons: JSON.parse(localStorage.getItem('guidance_user_hackathons') || '[]'),
     prediction: localStorage.getItem('guidance_user_prediction') || 'None',
   };
 };
@@ -162,6 +168,15 @@ export const saveGuidanceData = async (updatedFields) => {
   if (updatedFields.certs) {
     localStorage.setItem('guidance_user_certs', JSON.stringify(updatedFields.certs));
   }
+  if (updatedFields.projects) {
+    localStorage.setItem('guidance_user_projects', JSON.stringify(updatedFields.projects));
+  }
+  if (updatedFields.internships) {
+    localStorage.setItem('guidance_user_internships', JSON.stringify(updatedFields.internships));
+  }
+  if (updatedFields.hackathons) {
+    localStorage.setItem('guidance_user_hackathons', JSON.stringify(updatedFields.hackathons));
+  }
   if (updatedFields.interests) {
     localStorage.setItem('guidance_user_interests', JSON.stringify(updatedFields.interests));
   }
@@ -179,6 +194,9 @@ export const saveGuidanceData = async (updatedFields) => {
     softSkills: JSON.parse(localStorage.getItem('guidance_user_soft_skills') || '{}'),
     interests: JSON.parse(localStorage.getItem('guidance_user_interests') || '[]'),
     certs: JSON.parse(localStorage.getItem('guidance_user_certs') || '[]'),
+    projects: JSON.parse(localStorage.getItem('guidance_user_projects') || '[]'),
+    internships: JSON.parse(localStorage.getItem('guidance_user_internships') || '[]'),
+    hackathons: JSON.parse(localStorage.getItem('guidance_user_hackathons') || '[]'),
     prediction: localStorage.getItem('guidance_user_prediction') || 'None',
     ...updatedFields,
     // Ensure nested academics object is fully populated

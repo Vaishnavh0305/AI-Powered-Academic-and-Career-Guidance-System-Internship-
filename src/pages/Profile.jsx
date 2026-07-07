@@ -110,6 +110,9 @@ const Profile = () => {
       if (data.programmingSkills && Object.keys(data.programmingSkills).length > 0) setProgrammingSkills(data.programmingSkills);
       if (data.softSkills && Object.keys(data.softSkills).length > 0) setSoftSkills(data.softSkills);
       if (data.certs && data.certs.length > 0) setCerts(data.certs);
+      if (data.projects && data.projects.length > 0) setProjects(data.projects);
+      if (data.internships && data.internships.length > 0) setInternships(data.internships);
+      if (data.hackathons && data.hackathons.length > 0) setHackathons(data.hackathons);
     };
     loadData();
   }, []);
@@ -125,6 +128,9 @@ const Profile = () => {
       programmingSkills,
       softSkills,
       certs,
+      projects,
+      internships,
+      hackathons,
     });
     setToastOpen(true);
   };

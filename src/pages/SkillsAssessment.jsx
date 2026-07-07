@@ -25,10 +25,10 @@ const SkillsAssessment = () => {
   const navigate = useNavigate();
 
   // Retrieve user data from local storage
-  const hasProfile = localStorage.getItem('guidance_user_profile');
-  const hasAcademics = localStorage.getItem('guidance_academic_marks') === 'true';
-  const hasProgSkills = localStorage.getItem('guidance_user_programming_skills');
-  const hasSoftSkills = localStorage.getItem('guidance_user_soft_skills');
+  const hasProfile = !!localStorage.getItem('guidance_user_profile');
+  const hasAcademics = !!localStorage.getItem('guidance_academic_marks');
+  const hasProgSkills = !!localStorage.getItem('guidance_user_programming_skills');
+  const hasSoftSkills = !!localStorage.getItem('guidance_user_soft_skills');
 
   // Verify if baseline data is provided
   const isDataProvided = hasProfile && hasAcademics && (hasProgSkills || hasSoftSkills);

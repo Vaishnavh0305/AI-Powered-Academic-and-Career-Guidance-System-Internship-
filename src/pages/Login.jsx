@@ -52,7 +52,8 @@ const Login = () => {
             'guidance_academic_attendance', 'guidance_academic_study_hours',
             'guidance_academic_fav_subject', 'guidance_academic_achievements',
             'guidance_user_programming_skills', 'guidance_user_soft_skills',
-            'guidance_user_interests', 'guidance_user_certs', 'guidance_user_prediction'
+            'guidance_user_interests', 'guidance_user_certs', 'guidance_user_prediction',
+            'guidance_user_projects', 'guidance_user_internships', 'guidance_user_hackathons'
           ];
           keysToClear.forEach(k => localStorage.removeItem(k));
 
